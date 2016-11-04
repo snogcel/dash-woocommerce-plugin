@@ -173,7 +173,9 @@ class SPYR_AuthorizeNet_AIM extends WC_Payment_Gateway {
 			//"x_customer_ip"        	=> $_SERVER['REMOTE_ADDR'],
 			
 		);
-	
+
+        // var_dump($payload);
+
 		// Send this payload to Authorize.net for processing
 		$response = wp_remote_post( $environment_url, array(
 			'method'    => 'POST',
@@ -190,6 +192,12 @@ class SPYR_AuthorizeNet_AIM extends WC_Payment_Gateway {
 			
 		// Retrieve the body's resopnse if no errors found
 		$response_body = wp_remote_retrieve_body( $response );
+		$json = json_decode($response_body,true);
+
+		var_dump($json);
+
+		// var_dump($response_body);
+		die();
 
 		// Parse the response into something we can read
 		foreach ( preg_split( "/\r?\n/", $response_body ) as $line ) {
@@ -210,6 +218,8 @@ class SPYR_AuthorizeNet_AIM extends WC_Payment_Gateway {
             'result'   => 'success',
             'redirect' => $this->get_return_url( $customer_order ),
         );
+
+
 
 		// Get the values we need
 		// $r['response_code']             = $resp[0];
