@@ -1,11 +1,11 @@
 <?php
 /*
-Plugin Name: Authorize.net AIM - WooCommerce Gateway
-Plugin URI: http://www.sitepoint.com/
-Description: Extends WooCommerce by Adding the Authorize.net AIM Gateway.
+Plugin Name: Dashpay - WooCommerce Gateway
+Plugin URI: http://store.slayer.work/
+Description: Extends WooCommerce with Dash Payment Functionality.
 Version: 1.0
-Author: Yojance Rabelo, SitePoint
-Author URI: http://www.sitepoint.com/
+Author: Jon Kindel
+Author URI: http://www.slayer.work
 */
 
 // Include our Gateway Class and register Payment Gateway with WooCommerce
