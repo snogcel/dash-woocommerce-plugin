@@ -110,6 +110,9 @@ class SPYR_AuthorizeNet_AIM extends WC_Payment_Gateway {
 						   ? 'https://dev-test.dash.org/dash-payment-service/createReceiver'
 						   : 'https://dev-test.dash.org/dash-payment-service/createReceiver';
 
+
+//		wc_enqueue_js( file_get_contents( plugins_url( '/dash-payment-service.js', __FILE__ ) ) );
+
 		// This is where the fun stuff begins
 		$payload = array(
 		    // Dashpay API Key and Credentials
@@ -117,12 +120,12 @@ class SPYR_AuthorizeNet_AIM extends WC_Payment_Gateway {
 		    "email"                	=> $this->trans_key,
 
 		    // Order Details
-		    "currency"              => "USD",
+		    "currency"              	=> "USD",
 		    "amount"             	=> $customer_order->order_total,
 		    "description"        	=> str_replace( "#", "", $customer_order->get_order_number() ),
 
 		    // Callback URL
-		    "callbackUrl"           => "https://dev-test.dash.org:3001/dash-payment-service/cb"
+		    "callbackUrl"           	=> "https://store.slayer.work/cb"
 
 
 			// Authorize.net Credentials and API Info
@@ -174,7 +177,6 @@ class SPYR_AuthorizeNet_AIM extends WC_Payment_Gateway {
 			
 		);
 
-        // var_dump($payload);
 
 		// Send this payload to Authorize.net for processing
 		$response = wp_remote_post( $environment_url, array(
@@ -184,40 +186,58 @@ class SPYR_AuthorizeNet_AIM extends WC_Payment_Gateway {
 			'sslverify' => false,
 		) );
 
-		if ( is_wp_error( $response ) ) 
+		if ( is_wp_error( $response ) )
 			throw new Exception( __( 'We are currently experiencing problems trying to connect to this payment gateway. Sorry for the inconvenience.', 'spyr-authorizenet-aim' ) );
 
 		if ( empty( $response['body'] ) )
 			throw new Exception( __( 'Authorize.net\'s Response was empty.', 'spyr-authorizenet-aim' ) );
-			
+
 		// Retrieve the body's resopnse if no errors found
-		$response_body = wp_remote_retrieve_body( $response );
-		$json = json_decode($response_body,true);
+		$json = wp_remote_retrieve_body( $response );
 
-		var_dump($json);
+		if( empty( $json ) )
+			return false;
 
-		// var_dump($response_body);
-		die();
+		$json = json_decode( $json, true );
 
-		// Parse the response into something we can read
-		foreach ( preg_split( "/\r?\n/", $response_body ) as $line ) {
-			$resp = explode( "|", $line );
+	        // add order note with Payment Receiver id
+	        $customer_order->add_order_note( __( 'receiver_id created: ' . $json["receiver_id"], 'spyr-authorizenet-aim' ) );
+
+
+	        // Mark order as Paid
+		// $customer_order->payment_complete();
+
+	        // Empty the cart (Very important step)
+		// $woocommerce->cart->empty_cart();
+
+	        // Redirect to thank you page
+
+
+		if (0) { // query internal API to see if payment receiver has been paid
+
+        		return array(
+            			'result'   => 'success',
+            			'redirect' => $this->get_return_url( $customer_order ),
+        		);
+
+		} else { // waiting for payment receiver
+
+			$response = '<span><strong>Payment Address Created</strong></span><br />';
+			$response .= '<span class="hidden" id="receiver_id">' . $json["receiver_id"] . '</span>';
+			$response .= '<span class="" id="dash_payment_address">' . $json["dash_payment_address"] . '</span><br />';
+			$response .= '<span class="" id="amount_duffs">' . $json["amount_duffs"] . '</span><br />';
+			$response .= '<span class="hidden" id="receiver_status">200</span>';
+			$response .= '<div class="hidden" id="payment_receiver_container"></div>';
+
+			wc_add_notice( $response, 'notice' );
+
+			return array(
+            			'result'   => 'success',
+            			'refresh'   => 'true'
+        		);
+
 		}
 
-        // Payment has been successful
-        $customer_order->add_order_note( __( 'Authorize.net payment completed.', 'spyr-authorizenet-aim' ) );
-
-        // Mark order as Paid
-        $customer_order->payment_complete();
-
-        // Empty the cart (Very important step)
-        $woocommerce->cart->empty_cart();
-
-        // Redirect to thank you page
-        return array(
-            'result'   => 'success',
-            'redirect' => $this->get_return_url( $customer_order ),
-        );
 
 
 
@@ -271,3 +291,8 @@ class SPYR_AuthorizeNet_AIM extends WC_Payment_Gateway {
 
 } // End of SPYR_AuthorizeNet_AIM
 
+function dash_payment_service() {
+        wp_register_script('receiver', plugins_url('dash-payment-service.js', __FILE__), array('jquery'), 1.1, true);
+	wp_enqueue_script('receiver');
+}
+add_action( 'wp', 'dash_payment_service' );
