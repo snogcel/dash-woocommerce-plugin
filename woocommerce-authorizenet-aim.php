@@ -41,7 +41,12 @@ class SPYR_AuthorizeNet_AIM extends WC_Payment_Gateway {
 		
 		// Lets check for SSL
 		add_action( 'admin_notices', array( $this,	'do_ssl_check' ) );
-		
+
+		// Check for callback
+		add_action( 'woocommerce_api_spyr_authorizenet_aim', array( $this, 'check_response' ) );
+        	add_action( 'receiver_callback', array( $this, 'valid_response' ) );
+		add_action( 'verify_receiver', array( $this, 'verify_response' ) );
+
 		// Save settings
 		if ( is_admin() ) {
 			// Versions over 2.0
@@ -93,6 +98,58 @@ class SPYR_AuthorizeNet_AIM extends WC_Payment_Gateway {
 			)
 		);		
 	}
+
+	// check callback response
+
+    public function check_response() {
+
+	// get $_POST callback
+	$rest_json = file_get_contents("php://input");
+
+	if( empty( $rest_json ) )
+                wp_die( 'PayPal Request Failure', 'PayPal IPN', array( 'response' => 500 ) );
+
+	// decode JSON
+	$_POST = json_decode($rest_json, true);
+
+        error_log( print_r( $_POST, true ) );
+
+	if ( $_POST['receiver_status'] ) {
+		// verify_response($_POST)
+		do_action( 'verify_receiver', $_POST );
+		exit;
+	} else {
+		// valid_response($_POST)
+        	do_action( 'receiver_callback', $_POST );
+		exit;
+	}
+    }
+
+    // received valid response
+
+    public function valid_response( $receiverCallback ) {
+        
+        // handle post response
+        $customer_order = new WC_Order( $receiverCallback['description'] );
+
+        $customer_order->add_order_note( __( 'payment received: ' . $receiver_callback["txid"], 'spyr-authorizenet-aim' ) );
+	$customer_order->payment_complete();
+	
+        
+    }
+
+    // verify order status of receiver
+
+    Public function verify_response( $postData ) {
+
+        // Get order by order_id
+        $customer_order = new WC_Order( $postData['description'] );
+
+	$status = $customer_order->status;
+
+	echo json_encode(array("order_status"=>$status));
+
+    }
 	
 	// Submit payment and handle response
 	public function process_payment( $order_id ) {
@@ -125,7 +182,7 @@ class SPYR_AuthorizeNet_AIM extends WC_Payment_Gateway {
 		    "description"        	=> str_replace( "#", "", $customer_order->get_order_number() ),
 
 		    // Callback URL
-		    "callbackUrl"           	=> "https://store.slayer.work/cb"
+		    "callbackUrl"           	=> WC()->api_request_url( 'spyr_authorizenet_aim' )
 
 
 			// Authorize.net Credentials and API Info
@@ -222,11 +279,13 @@ class SPYR_AuthorizeNet_AIM extends WC_Payment_Gateway {
 
 		} else { // waiting for payment receiver
 
-			$response = '<span><strong>Payment Address Created</strong></span><br />';
-			$response .= '<span class="hidden" id="receiver_id">' . $json["receiver_id"] . '</span>';
-			$response .= '<span class="" id="dash_payment_address">' . $json["dash_payment_address"] . '</span><br />';
-			$response .= '<span class="" id="amount_duffs">' . $json["amount_duffs"] . '</span><br />';
+			// $response = '<span><strong>Payment Address Created</strong></span><br />';
+			$response = '<span class="hidden" id="receiver_id">' . $json["receiver_id"] . '</span>';
+			$response .= '<span class="hidden" id="order_id">' . $json["description"] . '</span>';
+			$response .= '<span class="" id="dash_payment_address"><strong>Payment Address: </strong>' . $json["dash_payment_address"] . '</span><br />';
+			$response .= '<span class="" id="amount_duffs"><strong>Payment Amount (duffs): </strong>' . $json["amount_duffs"] . '</span><br />';
 			$response .= '<span class="hidden" id="receiver_status">200</span>';
+			$response .= '<span class="hidden" id="return_url">' . $this->get_return_url( $customer_order ) . '</span><br />';
 			$response .= '<div class="hidden" id="payment_receiver_container"></div>';
 
 			wc_add_notice( $response, 'notice' );
@@ -235,6 +294,8 @@ class SPYR_AuthorizeNet_AIM extends WC_Payment_Gateway {
             			'result'   => 'success',
             			'refresh'   => 'true'
         		);
+
+			$woocommerce->cart->empty_cart();
 
 		}
 
@@ -292,7 +353,8 @@ class SPYR_AuthorizeNet_AIM extends WC_Payment_Gateway {
 } // End of SPYR_AuthorizeNet_AIM
 
 function dash_payment_service() {
-        wp_register_script('receiver', plugins_url('dash-payment-service.js', __FILE__), array('jquery'), 1.1, true);
+        wp_register_script('receiver', plugins_url('dash-payment-service.js', __FILE__), array('jquery'), 2.5, true);
 	wp_enqueue_script('receiver');
 }
 add_action( 'wp', 'dash_payment_service' );
+
