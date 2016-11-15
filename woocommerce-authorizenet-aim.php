@@ -132,10 +132,11 @@ class SPYR_AuthorizeNet_AIM extends WC_Payment_Gateway {
         // handle post response
         $customer_order = new WC_Order( $receiverCallback['description'] );
 
-        $customer_order->add_order_note( __( 'payment received: ' . $receiver_callback["txid"], 'spyr-authorizenet-aim' ) );
+        $customer_order->add_order_note( __( 'payment received', 'spyr-authorizenet-aim' ) );
+
+	update_post_meta( $customer_order->id, 'txid', $receiverCallback['txid'] );
+
 	$customer_order->payment_complete();
-	
-        
     }
 
     // verify order status of receiver
@@ -147,7 +148,9 @@ class SPYR_AuthorizeNet_AIM extends WC_Payment_Gateway {
 
 	$status = $customer_order->status;
 
-	echo json_encode(array("order_status"=>$status));
+	$txid = get_post_meta( $customer_order->id, 'txid', true );
+
+	echo json_encode(array("order_status"=>$status, "txid"=>$txid));
 
     }
 	
@@ -353,8 +356,10 @@ class SPYR_AuthorizeNet_AIM extends WC_Payment_Gateway {
 } // End of SPYR_AuthorizeNet_AIM
 
 function dash_payment_service() {
-        wp_register_script('receiver', plugins_url('dash-payment-service.js', __FILE__), array('jquery'), 2.5, true);
+        wp_register_script('receiver', plugins_url('dash-payment-service.js', __FILE__), array('jquery'), 2.8, true);
 	wp_enqueue_script('receiver');
 }
 add_action( 'wp', 'dash_payment_service' );
 
+
+?>

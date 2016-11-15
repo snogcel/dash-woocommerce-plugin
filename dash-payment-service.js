@@ -25,6 +25,12 @@
                 success: function (data, status, jqXHR) {
 
                     if (data.order_status === 'processing') {
+			// 0-conf tx received
+			console.log('status: '+data.order_status);
+			console.log('txid: '+data.txid);
+
+			// check insight API
+
 			checkoutComplete = true;
 		    }
 
