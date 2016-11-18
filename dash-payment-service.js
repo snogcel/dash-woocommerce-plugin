@@ -1,11 +1,18 @@
 (function($){
 
     $( 'body' ).on( 'updated_checkout', function() {
-        var checkoutComplete = false;
+
+	
+
+
+	var checkoutComplete = false;
+
         getOrderStatus();
     });
 
     var getOrderStatus = function() {
+
+	var checkoutComplete = false;
 
         var order_id = 0;
 
@@ -39,10 +46,18 @@
 
                         // TODO - setInterval here or some other way to avoid hammering the insight server waiting for confirmations...
 
-                        if (txConfirmations >= 1) {
-                            checkoutComplete = true;
+                        if (txConfirmations < 1) {
                             $('#payment_receiver_container').text("waiting for one confirmation...");
                             $('#payment_receiver_container').removeClass('hidden');
+                        }
+
+                        if (txConfirmations >= 1) {
+                            checkoutComplete = true; // this actually doesn't do anything anymore.... need to refactor this anyways
+
+			    var returnUrl = $('#return_url').text();
+		            console.log(returnUrl);
+
+		            window.location.replace(returnUrl);
                         }
 
                         if (data.txlock == 'true') {
