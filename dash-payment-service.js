@@ -2,8 +2,14 @@
 
     $( 'body' ).on( 'updated_checkout', function() {
 
-	
+	console.log("mrah");
 
+	// display QR Code
+	var address = $('#dash_payment_address').text();
+	var amount = parseInt($('#amount_duffs').text());
+
+	$('#payment_receiver_container').qrcode("dash:{{address}}?amount={{amount}}");
+	$('#payment_receiver_container').removeClass('hidden');
 
 	var checkoutComplete = false;
 
