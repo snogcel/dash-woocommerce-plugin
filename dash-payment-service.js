@@ -1,6 +1,6 @@
 (function($){
 
-    jQuery( 'body' ).on( 'updated_checkout', function() {
+    $( 'body' ).on( 'updated_checkout', function() {
         var checkoutComplete = false;
         getOrderStatus();
     });
@@ -9,14 +9,14 @@
 
         var order_id = 0;
 
-        if ( document.getElementById('order_id') ) order_id = parseInt(jQuery('#order_id').text());
+        if ( document.getElementById('order_id') ) order_id = parseInt($('#order_id').text());
 
         data = {
             "receiver_status": true,
             "description": order_id,
         };
 
-        jQuery.ajax({
+        $.ajax({
             type: "POST",
             url: "/?wc-api=spyr_authorizenet_aim",
             data: JSON.stringify(data),
@@ -41,8 +41,8 @@
 
                         if (txConfirmations >= 1) {
                             checkoutComplete = true;
-                            jQuery('#payment_receiver_container').text("waiting for one confirmation...");
-                            jQuery('#payment_receiver_container').removeClass('hidden');
+                            $('#payment_receiver_container').text("waiting for one confirmation...");
+                            $('#payment_receiver_container').removeClass('hidden');
                         }
 
                         if (data.txlock == 'true') {
@@ -65,7 +65,7 @@
         } else {
             console.log("order complete! redirecting to...");
 
-            var returnUrl = jQuery('#return_url').text();
+            var returnUrl = $('#return_url').text();
             console.log(returnUrl);
 
             window.location.replace(returnUrl);
@@ -78,7 +78,7 @@
         var insightPrefix = "insight-api-dash";
         var url = insightAPI + insightPrefix + "/tx/" + txid;
 
-        jQuery.ajax({
+        $.ajax({
             type: "GET",
             url: url,
             data: {
