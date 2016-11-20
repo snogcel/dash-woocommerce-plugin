@@ -1,15 +1,43 @@
 (function($){
 
-    $( 'body' ).on( 'updated_checkout', function() {
+    var fadeInModal = function() {
 
-	console.log("mrah");
+//	$('.woocommerce-billing-fields').fadeOut('fast');
+
+    }
+
+    $( 'body' ).on( 'updated_checkout', function() {
 
 	// display QR Code
 	var address = $('#dash_payment_address').text();
 	var amount = parseInt($('#amount_duffs').text());
 
-	$('#payment_receiver_container').qrcode("dash:{{address}}?amount={{amount}}");
-	$('#payment_receiver_container').removeClass('hidden');
+//	$('#payment_receiver_container').qrcode("dash:{{address}}?amount={{amount}}");
+//	$('#payment_receiver_container').removeClass('hidden');
+
+	$("#modal").iziModal({
+            headerColor: '#1c75bc',
+            title:'Send DASH to ...',
+            overlayClose: false,
+            width: 500,
+            height: 500,
+            padding: 25,
+            radius: 1,
+            autoOpen: false,
+            overlayColor: 'rgba(0, 0, 0, 0.6)'
+        });
+
+        $('#qrcode').qrcode('dash:{{address}}?amount={{amount}}');
+
+        $('#address').shorten({
+            showChars: 27,
+	    moreText: 'show complete address',
+    	    lessText: 'hide address'
+        });
+
+	$('#modal').iziModal('open', function(modal) {
+		fadeInModal();
+	});
 
 	var checkoutComplete = false;
 
@@ -21,6 +49,7 @@
 	var checkoutComplete = false;
 
         var order_id = 0;
+	fadeInModal();
 
         if ( document.getElementById('order_id') ) order_id = parseInt($('#order_id').text());
 
@@ -40,21 +69,25 @@
 
                 if (data.order_status === 'processing') {
 
+//		   jQuery('.woocommerce-NoticeGroup-updateOrderReview').addClass('hidden');
+//        	   jQuery('.woocommerce-billing-fields').addClass('hidden');
+//        	   jQuery('.woocommerce-shipping-fields').addClass('hidden');
+//        	   jQuery('.woocommerce-checkout-payment').addClass('hidden');
+
                     // 0-conf tx received
-                    console.log('status: '+data.order_status);
-                    console.log('txid: '+data.txid);
-                    console.log('txlock: '+data.txlock);
+//                    console.log('status: '+data.order_status);
+//                    console.log('txid: '+data.txid);
+//                    console.log('txlock: '+data.txlock);
 
                     // check insight API
                     verifyTx(data.txid, function(err, res) {
                         var txConfirmations = parseInt(res);
-                        console.log('confirmations: '+txConfirmations);
+                        // console.log('confirmations: '+txConfirmations);
 
                         // TODO - setInterval here or some other way to avoid hammering the insight server waiting for confirmations...
 
                         if (txConfirmations < 1) {
-                            $('#payment_receiver_container').text("waiting for one confirmation...");
-                            $('#payment_receiver_container').removeClass('hidden');
+			    $('#checkout_status').html('Transaction Received<br><span style="font-size:.8em">(0/1 confirmations)');
                         }
 
                         if (txConfirmations >= 1) {
@@ -68,6 +101,11 @@
 
                         if (data.txlock == 'true') {
                             checkoutComplete = true;
+
+			    var returnUrl = $('#return_url').text();
+                            console.log(returnUrl);
+
+                            window.location.replace(returnUrl);
                         }
                     });
                 }
@@ -82,7 +120,7 @@
         });
 
         if (!checkoutComplete) {
-            setTimeout(getOrderStatus, 1000);
+            setTimeout(getOrderStatus, 7500);
         } else {
             console.log("order complete! redirecting to...");
 

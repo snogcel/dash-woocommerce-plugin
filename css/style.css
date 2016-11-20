@@ -1,0 +1,12 @@
+#address { margin-top:.5em; }
+.formLabel { color: #085D9F; font-weight:bold; }
+.formLabel_amount { font-size:1.4em; }
+.formLabel_address { font-size:.9em; color: #393939 }
+.formValue { display:block; }
+.iziModal-button-close { /* display: none !important; */ }
+#address span a { background-color: #fafafa; color: #999999; padding: .25em 0em; }
+#formatted_dash { color: #085D9F; font-weight:bold; }
+
+#address span a.morelink {
+    color: #999 !important;
+}

@@ -130,14 +130,21 @@ class SPYR_AuthorizeNet_AIM extends WC_Payment_Gateway {
     public function valid_response( $receiverCallback ) {
         
         // handle post response
-        $customer_order = new WC_Order( $receiverCallback['description'] );
-
-        // $customer_order->add_order_note( __( 'payment received', 'spyr-authorizenet-aim' ) );
+        $customer_order = new WC_Order( $receiverCallback['description'] ); // TODO - set up external_id field?
 
 	update_post_meta( $customer_order->id, 'txid', $receiverCallback['txid'] );
 	update_post_meta( $customer_order->id, 'txlock', var_export($receiverCallback['txlock'], true) ); // convert boolean to string
 
-	$customer_order->payment_complete(); // zero confirmation - marks payment as "processing"
+	// check if correct amount paid
+
+	$amount_duffs = get_post_meta( $customer_order->id, 'amount_duffs', true );
+
+//	if ($receiverCallback['payment_received_amount_duffs'] == $amount_duffs) {
+		$customer_order->payment_complete(); // zero confirmation - marks payment as "processing"
+//	} else {
+//		$customer_order->update_status('on-hold', __('Incorrect Payment Amount', 'spyr_authorizenet_aim'));
+//	}
+
     }
 
     // verify order status of receiver
@@ -151,8 +158,9 @@ class SPYR_AuthorizeNet_AIM extends WC_Payment_Gateway {
 
 	$txid = get_post_meta( $customer_order->id, 'txid', true ); // txid
 	$txlock = get_post_meta( $customer_order->id, 'txlock', true ); // txlock (InstantSend)
+	$amount_duffs = get_post_meta( $customer_order->id, 'amount_duffs', true );
 
-	echo json_encode(array("order_status"=>$status, "txid"=>$txid, "txlock"=>$txlock));
+	echo json_encode(array("order_status"=>$status, "txid"=>$txid, "txlock"=>$txlock, "amount_duffs"=>$amount_duffs));
 
     }
 	
@@ -262,9 +270,10 @@ class SPYR_AuthorizeNet_AIM extends WC_Payment_Gateway {
 
 		$json = json_decode( $json, true );
 
-	        // add order note with Payment Receiver id
-	        $customer_order->add_order_note( __( 'receiver_id created: ' . $json["receiver_id"], 'spyr-authorizenet-aim' ) );
-
+	        // add order note with Payment Receiver id, amount duffs and base fiat
+		update_post_meta( $customer_order->id, 'receiver_id', $json['receiver_id'] );
+		update_post_meta( $customer_order->id, 'amount_duffs', $json['amount_duffs'] );
+		update_post_meta( $customer_order->id, 'base_fiat', $json['base_fiat'] );
 
 	        // Mark order as Paid
 		// $customer_order->payment_complete();
@@ -284,14 +293,45 @@ class SPYR_AuthorizeNet_AIM extends WC_Payment_Gateway {
 
 		} else { // waiting for payment receiver
 
-			// $response = '<span><strong>Payment Address Created</strong></span><br />';
-			$response = '<span class="hidden" id="receiver_id">' . $json["receiver_id"] . '</span>';
+
+
+			$response = '<span><strong>Payment Receiver Created</strong></span>';
+			$response .= '<span class="hidden" id="receiver_id">' . $json["receiver_id"] . '</span>';
 			$response .= '<span class="hidden" id="order_id">' . $json["description"] . '</span>';
-			$response .= '<span class="" id="dash_payment_address"><strong>Payment Address: </strong>' . $json["dash_payment_address"] . '</span><br />';
-			$response .= '<span class="" id="amount_duffs"><strong>Payment Amount (duffs): </strong>' . $json["amount_duffs"] . '</span><br />';
+			$response .= '<span class="hidden" id="dash_payment_address">' . $json["dash_payment_address"] . '</span>';
+			$response .= '<span class="hidden" id="amount_duffs">' . $json["amount_duffs"] . '</span>';
 			$response .= '<span class="hidden" id="receiver_status">200</span>';
-			$response .= '<span class="hidden" id="return_url">' . $this->get_return_url( $customer_order ) . '</span><br />';
+			$response .= '<span class="hidden" id="return_url">' . $this->get_return_url( $customer_order ) . '</span>';
 			$response .= '<div class="hidden" id="payment_receiver_container"></div>';
+
+	    $amount_dash = $json["amount_duffs"]/100000000;
+
+            $dialog_box =  '<div id="modal">';
+            $dialog_box .= '    <!-- Page content -->';
+            $dialog_box .= '    <div class="row">';
+            $dialog_box .= '        <div class="col-xs-12 col-md-6">';
+            $dialog_box .= '            <div id="qrcode"></div>';
+            $dialog_box .= '        </div>';
+            $dialog_box .= '        <div class="col-xs-12 col-md-6">';
+            $dialog_box .= '            <div class="form-group row">';
+            $dialog_box .= '                <label class="col-form-label formLabel formLabel_amount">Amount</label>';
+            $dialog_box .= '                <span class="formValue" id="formatted_dash">' . $amount_dash . ' tDASH</span>';
+            $dialog_box .= '                <span class="formValue" id="formatted_duffs>' . $json["amount_duffs"] . ' tDuffs</span><br />';
+            $dialog_box .= '            </div>';
+            $dialog_box .= '            <div class="form-group row">';
+            $dialog_box .= '                <label class="col-form-label formLabel">Status</label>';
+            $dialog_box .= '                <span class="formValue" id="checkout_status">Pending</span>';
+            $dialog_box .= '            </div>';
+            $dialog_box .= '        </div>';
+            $dialog_box .= '    </div>';
+            $dialog_box .= '    <div class="row">';
+            $dialog_box .= '        <div class="col-xs-12">';
+            $dialog_box .= '            <div><strong>Address: </strong><span class="formLabel_address">' . $json["dash_payment_address"] . '</span></div>';
+            $dialog_box .= '        </div>';
+            $dialog_box .= '    </div>';
+            $dialog_box .= '</div>';
+
+            $response .= $dialog_box;
 
 			wc_add_notice( $response, 'notice' );
 
@@ -357,11 +397,49 @@ class SPYR_AuthorizeNet_AIM extends WC_Payment_Gateway {
 
 } // End of SPYR_AuthorizeNet_AIM
 
+
+
+// custom js and css
+
+function jquery_qrcode() {
+    wp_register_script('qrcode', plugins_url('js/jquery-qrcode.min.js', __FILE__), array('jquery'), 0.1, true);
+    wp_enqueue_script('qrcode');
+}
+add_action( 'wp', 'jquery_qrcode' );
+
+function jquery_shorten() {
+    wp_register_script('shorten', plugins_url('js/jquery.shorten.min.js', __FILE__), array('jquery'), 0.1, true);
+    wp_enqueue_script('shorten');
+}
+add_action( 'wp', 'jquery_shorten' );
+
+function izi_modal() {
+    wp_register_script('modal', plugins_url('js/iziModal.min.js', __FILE__), array('jquery'), 0.1, true);
+    wp_enqueue_script('modal');
+}
+add_action( 'wp', 'izi_modal' );
+
+// popup css
+function iziz_modal_style()
+{
+    wp_register_style( 'modal_style', plugins_url( '/css/iziModal.min.css', __FILE__ ), array(), '20120208', 'all' );
+    wp_enqueue_style( 'modal_style' );
+}
+add_action( 'wp_enqueue_scripts', 'iziz_modal_style' );
+
+// other css
+function custom_style()
+{
+    wp_register_style( 'custom', plugins_url( '/css/style.css', __FILE__ ), array(), '20120208', 'all' );
+    wp_enqueue_style( 'custom' );
+}
+add_action( 'wp_enqueue_scripts', 'custom_style' );
+
+
 function dash_payment_service() {
-        wp_register_script('receiver', plugins_url('dash-payment-service.js', __FILE__), array('jquery'), 3.1, true);
+    wp_register_script('receiver', plugins_url('js/dash-payment-service.js', __FILE__), array('jquery'), 6.3, true);
 	wp_enqueue_script('receiver');
 }
 add_action( 'wp', 'dash_payment_service' );
-
 
 ?>

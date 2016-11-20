@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.0/themes/smoothness/jquery-ui.css">
+
+    <script src="https://code.jquery.com/jquery-3.1.0.js" integrity="sha256-slogkvB1K3VOkzAI8QITxV3VzpOnkeNVsKvtkYLMjfk=" crossorigin="anonymous"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.0/jquery-ui.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+
+    <script src="../js/iziModal.min.js" type="text/javascript"></script>
+    <script src="../js/jquery-qrcode.min.js"></script>
+    <script src="../js/jquery.shorten.min.js" type="text/javascript"></script>
+
+    <link rel="stylesheet" href="../css/iziModal.min.css">
+
+
+    <script type="text/javascript">
+
+        var address = "93W5CWWbWbpMRMod9kYQdeMyNnsDHGbVUJ";
+        var amount = 1097658274;
+
+        $(document).ready(function() {
+
+            $("#modal").iziModal({
+                headerColor: '#1c75bc',
+                title:'Send 10.24 DASH to ...',
+                overlayClose: false,
+                width: 500,
+                height: 500,
+                padding: 25,
+                radius: 1,
+                autoOpen: false,
+                overlayColor: 'rgba(0, 0, 0, 0.6)'
+            });
+
+            /*$("#modal").iziModal({
+                title: '',
+                subtitle: '',
+                headerColor: '#88A0B9',
+                theme: '',  // light
+                attached: '', // bottom, top
+                icon: null,
+                iconText: null,
+                iconColor: '',
+                rtl: false,
+                width: 600,
+                padding: 0,
+                radius: 3,
+                zindex: 999,
+                iframe: false,
+                iframeHeight: 400,
+                iframeURL: null,
+                focusInput: true,
+                group: '',
+                loop: false,
+                navigateCaption: true,
+                navigateArrows: true, // closeToModal, closeScreenEdge
+                history: true,
+                restoreDefaultContent: false,
+                autoOpen: 0, // Boolean, Number
+                bodyOverflow: false,
+                fullscreen: false,
+                openFullscreen: false,
+                closeOnEscape: true,
+                overlay: true,
+                overlayClose: true,
+                overlayColor: 'rgba(0, 0, 0, 0.4)',
+                timeout: false,
+                timeoutProgressbar: false,
+                pauseOnHover: false,
+                timeoutProgressbarColor: 'rgba(255,255,255,0.5)',
+                transitionIn: 'comingIn',
+                transitionOut: 'comingOut',
+                transitionInOverlay: 'fadeIn',
+                transitionOutOverlay: 'fadeOut',
+                onFullscreen: function(){},
+                onResize: function(){},
+                onOpening: function(){},
+                onOpened: function(){},
+                onClosing: function(){},
+                onClosed: function(){}
+            });*/
+
+
+            $(document).on('click', '.trigger', function (event) {
+                event.preventDefault();
+                $('#modal').iziModal('open');
+            });
+
+
+            $('#qrcode').qrcode("dash:{{address}}?amount={{amount}}");
+
+            $('#address').shorten({
+                showChars: 21
+            });
+
+        });
+
+
+
+    </script>
+
+    <style type="text/css">
+        #address { margin-top:.5em; }
+        .formLabel { color: #085D9F; font-weight:bold; }
+        .formLabel_amount { font-size:1.4em; }
+        .formLabel_address { font-size:.9em; color: #393939 }
+        .formValue { display:block; }
+        .iziModal-button-close { /* display: none !important; */ }
+    </style>
+
+</head>
+<body>
+
+
+<!-- Trigger to open Modal -->
+<a href="https://github.com/dolce/iziModal" class="trigger">Modal</a>
+<!-- Modal structure -->
+<div id="modal">
+    <!-- Page content -->
+    <div class="row">
+        <div class="col-xs-12 col-md-6">
+
+            <div id="qrcode"></div>
+
+        </div>
+
+        <div class="col-xs-12 col-md-6">
+
+            <div class="form-group row">
+                <label class="col-form-label formLabel formLabel_amount">Amount</label>
+                <span class="formValue">
+                    10.97 tDASH
+                </span>
+                <span class="formValue">
+                    1097658274 tDuffs
+                </span>
+            </div>
+
+            <br />
+
+            <div class="form-group row">
+                <label class="col-form-label formLabel">Status</label>
+                <span class="formValue">
+                    Waiting for transaction to begin...
+                </span>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-xs-12">
+
+            <div id="address"><strong>Address: </strong><span class="formLabel_address">93W5CWWbWbpMRMod9kYQdeMyNnsDHGbVUJ</span></div>
+
+        </div>
+    </div>
+
+</div>
+
+</body>
+</html>
