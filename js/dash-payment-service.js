@@ -49,7 +49,7 @@
 	var checkoutComplete = false;
 
         var order_id = 0;
-	fadeInModal();
+	    fadeInModal();
 
         if ( document.getElementById('order_id') ) order_id = parseInt($('#order_id').text());
 
@@ -156,7 +156,12 @@
                 cb(err, null);
             }
         });
-    }
+    };
+
+    var valuationService = function(fiatCode, cb) {
+        // find value per fiat code
+
+    };
 
 })(jQuery);
 

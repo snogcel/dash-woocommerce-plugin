@@ -46,6 +46,7 @@ class SPYR_AuthorizeNet_AIM extends WC_Payment_Gateway {
 		add_action( 'woocommerce_api_spyr_authorizenet_aim', array( $this, 'check_response' ) );
         	add_action( 'receiver_callback', array( $this, 'valid_response' ) );
 		add_action( 'verify_receiver', array( $this, 'verify_response' ) );
+		add_action( 'site_currency', array( $this, 'return_currency' ) );
 
 		// Save settings
 		if ( is_admin() ) {
@@ -114,15 +115,27 @@ class SPYR_AuthorizeNet_AIM extends WC_Payment_Gateway {
 
         error_log( print_r( $_POST, true ) );
 
-	if ( $_POST['receiver_status'] ) {
-		// verify_response($_POST)
-		do_action( 'verify_receiver', $_POST );
-		exit;
-	} else {
-		// valid_response($_POST)
-        	do_action( 'receiver_callback', $_POST );
-		exit;
-	}
+        if ( isset( $_POST['receiver_status'] ) ) {
+            // verify_response($_POST)
+            do_action( 'verify_receiver', $_POST );
+            exit;
+        } else if ( isset( $_POST['site_currency'] ) ) {
+                // return_currency($_POST)
+                do_action( 'site_currency', $_POST );
+                exit;
+        } else {
+            // valid_response($_POST)
+                do_action( 'receiver_callback', $_POST );
+            exit;
+        }
+
+    }
+
+    public function return_currency( $request ) {
+
+        $currency = get_woocommerce_currency();
+        echo json_encode(array("currency"=>$currency));
+
     }
 
     // received valid response
@@ -191,8 +204,8 @@ class SPYR_AuthorizeNet_AIM extends WC_Payment_Gateway {
 
 		    // Order Details
 		    "currency"              	=> "USD",
-		    "amount"             	=> $customer_order->order_total,
-		    "description"        	=> str_replace( "#", "", $customer_order->get_order_number() ),
+		    "amount"             	    => $customer_order->order_total,
+		    "description"        	    => str_replace( "#", "", $customer_order->get_order_number() ),
 
 		    // Callback URL
 		    "callbackUrl"           	=> WC()->api_request_url( 'spyr_authorizenet_aim' )
