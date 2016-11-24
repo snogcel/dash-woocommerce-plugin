@@ -1,12 +1,109 @@
 (function($){
 
+    var valuation = {};
+
     var fadeInModal = function() {
-
-//	$('.woocommerce-billing-fields').fadeOut('fast');
-
+	//	$('.woocommerce-billing-fields').fadeOut('fast');
     }
 
+    $(document).ready(function() {
+
+	console.log("-document ready-");
+
+	$("input[name='payment_method']:checked").each(function() {
+
+	console.log("-payment method-");
+
+	var payment_method = $(this).val();
+
+	console.log(payment_method);
+
+	if (payment_method == 'spyr_authorizenet_aim') {
+		if (valuation) {
+
+			$('.amount').each(function() { 
+
+				price = Number($(this).text().replace(/[^0-9\.]+/g,""));
+				var dashTotal = parseFloat(price/valuation.value).toFixed(2); 
+
+				$(this).addClass("hidden"); // hide default price			
+				$(this).after('<span class="woocommerce-Price-amount amount dashTotal">'+dashTotal+' Dash</span>');
+			});
+
+		} else {
+			resetCurrency();
+		}
+	}
+
+	});
+
+    });
+
+
     $( 'body' ).on( 'updated_checkout', function() {
+
+
+	$("input[name='payment_method']:checked").each(function() {
+
+        console.log("-payment method-");
+
+        var payment_method = $(this).val();
+
+        console.log(payment_method);
+
+        if (payment_method == 'spyr_authorizenet_aim') {
+
+		getSiteCurrency(function(err,res) {
+	        valuation = res;
+
+                if (valuation) {
+
+                        $('.amount').each(function() {
+
+                                price = Number($(this).text().replace(/[^0-9\.]+/g,""));
+                                var dashTotal = parseFloat(price/valuation.value).toFixed(2);
+
+                                $(this).addClass("hidden"); // hide default price
+                                $(this).after('<span class="woocommerce-Price-amount amount dashTotal">'+dashTotal+' Dash</span>');
+                        });
+
+                } else {
+                        resetCurrency();
+                }
+
+		});
+
+	}
+
+        });
+
+
+	$("input[name='payment_method']").change(function() {
+
+        console.log("-payment method-");
+
+        var payment_method = $(this).val();
+
+        console.log(payment_method);
+
+        if (payment_method == 'spyr_authorizenet_aim') {
+                if (valuation) {
+
+                        $('.amount').each(function() {
+
+                                price = Number($(this).text().replace(/[^0-9\.]+/g,""));
+                                var dashTotal = parseFloat(price/valuation.value).toFixed(2);
+
+                                $(this).addClass("hidden"); // hide default price
+                                $(this).after('<span class="woocommerce-Price-amount amount dashTotal">'+dashTotal+' Dash</span>');
+                        });
+
+                }
+
+                } else {
+                        resetCurrency();
+                }
+        });
 
 	// display QR Code
 	var address = $('#dash_payment_address').text();
@@ -158,10 +255,72 @@
         });
     };
 
-    var valuationService = function(fiatCode, cb) {
-        // find value per fiat code
+    var getSiteCurrency = function(cb) {
 
-    };
+	// get site currency
+	$.ajax({
+            type: "POST",
+            url: "/?wc-api=spyr_authorizenet_aim",
+            data: JSON.stringify({"site_currency": true}),
+            contentType: "application/json; charset=utf-8",
+            crossDomain: true,
+            dataType: "json",
+            success: function (data, status, jqXHR) {
+
+		 // pass to dash-payment-service
+		valuationService(data.currency, function(err,res) {
+			if(err) cb(err,null);
+			
+			cb(null,res);
+	    	});
+
+            },
+            error: function (jqXHR, status, error) {
+                console.log(jqXHR);
+                var err = eval("(" + jqXHR.responseText + ")");
+                
+		cb(err,null);
+            }
+        });
+}
+
+var resetCurrency = function() {
+
+	$('.dashTotal').remove();
+	$('.woocommerce-Price-amount').removeClass("hidden");
+}
+
+var valuationService = function(fiatCode, cb) {
+
+	var url = "https://dev-test.dash.org/dash-payment-service/valuationService";
+
+	$.ajax({
+            type: "POST",
+            url: url,
+            data: JSON.stringify({"fiatCode": fiatCode}),
+            contentType: "application/json; charset=utf-8",
+            crossDomain: true,
+            dataType: "json",
+            success: function (data, status, jqXHR) {
+
+		cb(null, data);
+
+            },
+            error: function (jqXHR, status, error) {
+                console.log(jqXHR);
+                var err = eval("(" + jqXHR.responseText + ")");
+                cb(err, null);
+            }
+        });
+}
+
+var valuation = {}; 
+
+getSiteCurrency(function(err,res) {
+	valuation = res;
+	console.log("this function called");
+});
+
 
 })(jQuery);
 
