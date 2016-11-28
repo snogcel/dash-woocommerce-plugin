@@ -44,7 +44,9 @@ class SPYR_AuthorizeNet_AIM extends WC_Payment_Gateway {
 
 		// Check for callback
 		add_action( 'woocommerce_api_spyr_authorizenet_aim', array( $this, 'check_response' ) );
-        	add_action( 'receiver_callback', array( $this, 'valid_response' ) );
+
+        // API Routes
+        add_action( 'receiver_callback', array( $this, 'valid_response' ) );
 		add_action( 'verify_receiver', array( $this, 'verify_response' ) );
 		add_action( 'site_currency', array( $this, 'return_currency' ) );
 
@@ -104,14 +106,14 @@ class SPYR_AuthorizeNet_AIM extends WC_Payment_Gateway {
 
     public function check_response() {
 
-	// get $_POST callback
-	$rest_json = file_get_contents("php://input");
+	    // get $_POST callback
+	    $rest_json = file_get_contents("php://input");
 
-	if( empty( $rest_json ) )
+	    if( empty( $rest_json ) )
                 wp_die( 'PayPal Request Failure', 'PayPal IPN', array( 'response' => 500 ) );
 
-	// decode JSON
-	$_POST = json_decode($rest_json, true);
+	    // decode JSON
+	    $_POST = json_decode($rest_json, true);
 
         error_log( print_r( $_POST, true ) );
 
@@ -120,12 +122,12 @@ class SPYR_AuthorizeNet_AIM extends WC_Payment_Gateway {
             do_action( 'verify_receiver', $_POST );
             exit;
         } else if ( isset( $_POST['site_currency'] ) ) {
-                // return_currency($_POST)
-                do_action( 'site_currency', $_POST );
-                exit;
+            // return_currency($_POST)
+            do_action( 'site_currency', $_POST );
+            exit;
         } else {
             // valid_response($_POST)
-                do_action( 'receiver_callback', $_POST );
+            do_action( 'receiver_callback', $_POST );
             exit;
         }
 
@@ -134,16 +136,38 @@ class SPYR_AuthorizeNet_AIM extends WC_Payment_Gateway {
     public function return_currency( $request ) {
 
         $currency = get_woocommerce_currency();
-        echo json_encode(array("currency"=>$currency));
+	    $symbol = get_woocommerce_currency_symbol();
+        echo json_encode(array("currency"=>$currency,"symbol"=>$symbol));
+
+    }
+
+    // verify order status of receiver
+
+    Public function verify_response( $postData ) {
+
+        // Get order by order_id
+        $customer_order = new WC_Order( $postData['order_id'] );
+
+        $status = $customer_order->status;
+
+        $return_url = get_post_meta( $customer_order->id, 'return_url', true );
+
+        $txid = get_post_meta( $customer_order->id, 'txid', true ); // txid
+        $txlock = get_post_meta( $customer_order->id, 'txlock', true ); // txlock (InstantSend)
+        $amount_duffs = get_post_meta( $customer_order->id, 'amount_duffs', true );
+
+
+        echo json_encode(array("order_status"=>$status, "return_url"=>$return_url, "txid"=>$txid, "txlock"=>$txlock, "amount_duffs"=>$amount_duffs));
 
     }
 
     // received valid response
 
     public function valid_response( $receiverCallback ) {
-        
-        // handle post response
-        $customer_order = new WC_Order( $receiverCallback['description'] ); // TODO - set up external_id field?
+
+    // handle post response
+    
+    $customer_order = new WC_Order( $receiverCallback['description'] ); // TODO - set up external_id field?
 
 	update_post_meta( $customer_order->id, 'txid', $receiverCallback['txid'] );
 	update_post_meta( $customer_order->id, 'txlock', var_export($receiverCallback['txlock'], true) ); // convert boolean to string
@@ -160,41 +184,21 @@ class SPYR_AuthorizeNet_AIM extends WC_Payment_Gateway {
 
     }
 
-    // verify order status of receiver
-
-    Public function verify_response( $postData ) {
-
-        // Get order by order_id
-        $customer_order = new WC_Order( $postData['description'] );
-
-	$status = $customer_order->status;
-
-	$txid = get_post_meta( $customer_order->id, 'txid', true ); // txid
-	$txlock = get_post_meta( $customer_order->id, 'txlock', true ); // txlock (InstantSend)
-	$amount_duffs = get_post_meta( $customer_order->id, 'amount_duffs', true );
-
-	echo json_encode(array("order_status"=>$status, "txid"=>$txid, "txlock"=>$txlock, "amount_duffs"=>$amount_duffs));
-
-    }
-	
 	// Submit payment and handle response
 	public function process_payment( $order_id ) {
 		global $woocommerce;
-		
+
 		// Get this Order's information so that we know
 		// who to charge and how much
 		$customer_order = new WC_Order( $order_id );
-		
+
 		// Are we testing right now or is it a real transaction
 		$environment = ( $this->environment == "yes" ) ? 'TRUE' : 'FALSE';
 
 		// Decide which URL to post to
-		$environment_url = ( "FALSE" == $environment ) 
+		$environment_url = ( "FALSE" == $environment )
 						   ? 'https://dev-test.dash.org/dash-payment-service/createReceiver'
 						   : 'https://dev-test.dash.org/dash-payment-service/createReceiver';
-
-
-//		wc_enqueue_js( file_get_contents( plugins_url( '/dash-payment-service.js', __FILE__ ) ) );
 
 		// This is where the fun stuff begins
 		$payload = array(
@@ -215,15 +219,15 @@ class SPYR_AuthorizeNet_AIM extends WC_Payment_Gateway {
 			//"x_tran_key"           	=> $this->trans_key,
 			//"x_login"              	=> $this->api_login,
 			//"x_version"            	=> "3.1",
-			
+
 			// Order total
 			//"x_amount"             	=> $customer_order->order_total,
-			
+
 			// Credit Card Information
 			//"x_card_num"           	=> str_replace( array(' ', '-' ), '', $_POST['spyr_authorizenet_aim-card-number'] ),
 			//"x_card_code"          	=> ( isset( $_POST['spyr_authorizenet_aim-card-cvc'] ) ) ? $_POST['spyr_authorizenet_aim-card-cvc'] : '',
 			//"x_exp_date"           	=> str_replace( array( '/', ' '), '', $_POST['spyr_authorizenet_aim-card-expiry'] ),
-			
+
 			//"x_type"               	=> 'AUTH_CAPTURE',
 			//"x_invoice_num"        	=> str_replace( "#", "", $customer_order->get_order_number() ),
 			//"x_test_request"       	=> $environment,
@@ -232,7 +236,7 @@ class SPYR_AuthorizeNet_AIM extends WC_Payment_Gateway {
 			//"x_delim_data"         	=> "TRUE",
 			//"x_relay_response"     	=> "FALSE",
 			//"x_method"             	=> "CC",
-			
+
 			// Billing Information
 			//"x_first_name"         	=> $customer_order->billing_first_name,
 			//"x_last_name"          	=> $customer_order->billing_last_name,
@@ -243,7 +247,7 @@ class SPYR_AuthorizeNet_AIM extends WC_Payment_Gateway {
 			//"x_country"            	=> $customer_order->billing_country,
 			//"x_phone"              	=> $customer_order->billing_phone,
 			//"x_email"              	=> $customer_order->billing_email,
-			
+
 			// Shipping Information
 			//"x_ship_to_first_name" 	=> $customer_order->shipping_first_name,
 			//"x_ship_to_last_name"  	=> $customer_order->shipping_last_name,
@@ -253,11 +257,11 @@ class SPYR_AuthorizeNet_AIM extends WC_Payment_Gateway {
 			//"x_ship_to_country"    	=> $customer_order->shipping_country,
 			//"x_ship_to_state"      	=> $customer_order->shipping_state,
 			//"x_ship_to_zip"        	=> $customer_order->shipping_postcode,
-			
+
 			// Some Customer Information
 			//"x_cust_id"            	=> $customer_order->user_id,
 			//"x_customer_ip"        	=> $_SERVER['REMOTE_ADDR'],
-			
+
 		);
 
 
@@ -283,19 +287,26 @@ class SPYR_AuthorizeNet_AIM extends WC_Payment_Gateway {
 
 		$json = json_decode( $json, true );
 
-	        // add order note with Payment Receiver id, amount duffs and base fiat
-		update_post_meta( $customer_order->id, 'receiver_id', $json['receiver_id'] );
-		update_post_meta( $customer_order->id, 'amount_duffs', $json['amount_duffs'] );
-		update_post_meta( $customer_order->id, 'base_fiat', $json['base_fiat'] );
+	    // add order note with Payment Receiver metadata
+    	update_post_meta( $customer_order->id, 'receiver_id', $json['receiver_id'] );
+    	update_post_meta( $customer_order->id, 'username', $json['username'] );
+    	update_post_meta( $customer_order->id, 'dash_payment_address', $json['dash_payment_address'] );
+    	update_post_meta( $customer_order->id, 'amount_fiat', $json['amount_fiat'] );
+    	update_post_meta( $customer_order->id, 'type_fiat', $json['type_fiat'] );
+    	update_post_meta( $customer_order->id, 'base_fiat', $json['base_fiat'] );
+    	update_post_meta( $customer_order->id, 'amount_duffs', $json['amount_duffs'] );
+    	update_post_meta( $customer_order->id, 'description', $json['description'] );
 
-	        // Mark order as Paid
+    	update_post_meta( $customer_order->id, 'return_url', $this->get_return_url( $customer_order ) );
+
+
+	    // Mark order as Paid
 		// $customer_order->payment_complete();
 
-	        // Empty the cart (Very important step)
+	    // Empty the cart (Very important step)
 		// $woocommerce->cart->empty_cart();
 
-	        // Redirect to thank you page
-
+	    // Redirect to thank you page
 
 		if (0) { // query internal API to see if payment receiver has been paid
 
@@ -306,18 +317,22 @@ class SPYR_AuthorizeNet_AIM extends WC_Payment_Gateway {
 
 		} else { // waiting for payment receiver
 
+            $response = '<span><strong>Payment Receiver Created</strong></span>';
+            $response .= '<span class="hidden" id="order_id">' . $customer_order->get_order_number() . '</span>';
 
+            $response .= '<span class="hidden" id="receiver_id">' . $json["receiver_id"] . '</span>';
+            $response .= '<span class="hidden" id="username">' . $json["username"] . '</span>';
+            $response .= '<span class="hidden" id="dash_payment_address">' . $json["dash_payment_address"] . '</span>';
+            $response .= '<span class="hidden" id="amount_fiat">' . $json["amount_fiat"] . '</span>';
+            $response .= '<span class="hidden" id="type_fiat">' . $json["type_fiat"] . '</span>';
+            $response .= '<span class="hidden" id="base_fiat">' . $json["base_fiat"] . '</span>';
+            $response .= '<span class="hidden" id="amount_duffs">' . $json["amount_duffs"] . '</span>';
+            $response .= '<span class="hidden" id="description">' . $json["description"] . '</span>';
 
-			$response = '<span><strong>Payment Receiver Created</strong></span>';
-			$response .= '<span class="hidden" id="receiver_id">' . $json["receiver_id"] . '</span>';
-			$response .= '<span class="hidden" id="order_id">' . $json["description"] . '</span>';
-			$response .= '<span class="hidden" id="dash_payment_address">' . $json["dash_payment_address"] . '</span>';
-			$response .= '<span class="hidden" id="amount_duffs">' . $json["amount_duffs"] . '</span>';
-			$response .= '<span class="hidden" id="receiver_status">200</span>';
-			$response .= '<span class="hidden" id="return_url">' . $this->get_return_url( $customer_order ) . '</span>';
-			$response .= '<div class="hidden" id="payment_receiver_container"></div>';
+            $response .= '<span class="hidden" id="return_url">' . $this->get_return_url( $customer_order ) . '</span>';
 
-	    $amount_dash = $json["amount_duffs"]/100000000;
+            $amount_dash = round($json["amount_duffs"]/100000000, 2);
+            $amount_dots = round($json["amount_duffs"]/100, 2);
 
             $dialog_box =  '<div id="modal">';
             $dialog_box .= '    <!-- Page content -->';
@@ -327,9 +342,8 @@ class SPYR_AuthorizeNet_AIM extends WC_Payment_Gateway {
             $dialog_box .= '        </div>';
             $dialog_box .= '        <div class="col-xs-12 col-md-6">';
             $dialog_box .= '            <div class="form-group row">';
-            $dialog_box .= '                <label class="col-form-label formLabel formLabel_amount">Amount</label>';
-            $dialog_box .= '                <span class="formValue" id="formatted_dash">' . $amount_dash . ' tDASH</span>';
-            $dialog_box .= '                <span class="formValue" id="formatted_duffs>' . $json["amount_duffs"] . ' tDuffs</span><br />';
+            $dialog_box .= '                <label class="col-form-label formLabel formLabel_amount" id="formatted_dash">' . $amount_dash . ' DASH</label>';
+            $dialog_box .= '                <span class="formValue" id="formatted_duffs>' . $amount_dots . ' dots</span><br />';
             $dialog_box .= '            </div>';
             $dialog_box .= '            <div class="form-group row">';
             $dialog_box .= '                <label class="col-form-label formLabel">Status</label>';
@@ -371,7 +385,7 @@ class SPYR_AuthorizeNet_AIM extends WC_Payment_Gateway {
 		// if ( ( $r['response_code'] == 1 ) || ( $r['response_code'] == 4 ) ) {
 			// Payment has been successful
 		//	$customer_order->add_order_note( __( 'Authorize.net payment completed.', 'spyr-authorizenet-aim' ) );
-												 
+
 			// Mark order as Paid
 		//	$customer_order->payment_complete();
 
@@ -392,20 +406,20 @@ class SPYR_AuthorizeNet_AIM extends WC_Payment_Gateway {
 		// }
 
 	}
-	
+
 	// Validate fields
 	public function validate_fields() {
 		return true;
 	}
-	
+
 	// Check if we are forcing SSL on checkout pages
 	// Custom function not required by the Gateway
 	public function do_ssl_check() {
 		if( $this->enabled == "yes" ) {
 			if( get_option( 'woocommerce_force_ssl_checkout' ) == "no" ) {
-				echo "<div class=\"error\"><p>". sprintf( __( "<strong>%s</strong> is enabled and WooCommerce is not forcing the SSL certificate on your checkout page. Please ensure that you have a valid SSL certificate and that you are <a href=\"%s\">forcing the checkout pages to be secured.</a>" ), $this->method_title, admin_url( 'admin.php?page=wc-settings&tab=checkout' ) ) ."</p></div>";	
+				echo "<div class=\"error\"><p>". sprintf( __( "<strong>%s</strong> is enabled and WooCommerce is not forcing the SSL certificate on your checkout page. Please ensure that you have a valid SSL certificate and that you are <a href=\"%s\">forcing the checkout pages to be secured.</a>" ), $this->method_title, admin_url( 'admin.php?page=wc-settings&tab=checkout' ) ) ."</p></div>";
 			}
-		}		
+		}
 	}
 
 } // End of SPYR_AuthorizeNet_AIM
@@ -450,7 +464,7 @@ add_action( 'wp_enqueue_scripts', 'custom_style' );
 
 
 function dash_payment_service() {
-    wp_register_script('receiver', plugins_url('js/dash-payment-service.js', __FILE__), array('jquery'), 6.3, true);
+    wp_register_script('receiver', plugins_url('js/checkout.js', __FILE__), array('jquery'), 4.5, true);
 	wp_enqueue_script('receiver');
 }
 add_action( 'wp', 'dash_payment_service' );
