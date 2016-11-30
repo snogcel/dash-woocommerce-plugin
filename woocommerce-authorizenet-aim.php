@@ -464,7 +464,7 @@ add_action( 'wp_enqueue_scripts', 'custom_style' );
 
 
 function dash_payment_service() {
-    wp_register_script('receiver', plugins_url('js/checkout.js', __FILE__), array('jquery'), 4.5, true);
+    wp_register_script('receiver', plugins_url('js/checkout.js', __FILE__), array('jquery'), 7.6, true);
 	wp_enqueue_script('receiver');
 }
 add_action( 'wp', 'dash_payment_service' );

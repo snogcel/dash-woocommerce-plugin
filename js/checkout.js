@@ -1,6 +1,8 @@
 // (function($){
 
-    var checkout = new Checkout();
+
+
+    // Plugin Config
 
     var socket = null;
 
@@ -48,18 +50,53 @@
 
     }
 
+
+    var checkout = new Checkout();
+
     jQuery( document ).ready(function() {
+
+        checkout.getExchangeRate({expiry:300}, function(err, res) {
+
+            // exchange rate cached
+
+        });
 
     });
 
     jQuery( 'body' ).on( 'updated_checkout', function() {
 
+        checkout.checkoutActive = false; // set status to inactive
+
+        jQuery(".siteCurrency").each(function() { // check for existence of div.siteCurrency created by checkout
+
+            checkout.checkoutActive = true; // set status to active if so
+
+        }).promise().done( function() {
+
+            jQuery("input[name='payment_method']:checked").each(function() {
+                if (jQuery(this).val() == 'spyr_authorizenet_aim') {
+                    checkout.setCurrency();
+                } else {
+                    checkout.resetCurrency();
+                }
+            });
+
+            jQuery("input[name='payment_method']").change(function() {
+                if (jQuery(this).val() == 'spyr_authorizenet_aim') {
+                    checkout.setCurrency();
+                } else {
+                    checkout.resetCurrency();
+                }
+            });
+
+        });
+
         // checkout has refreshed, time to display QR Code
 
         // get Payment Receiver
-        if (document.getElementById('receiver_id')) {
+        if (document.getElementById('receiver_id') && !checkout.initialized) {
 
-            console.log("-payment receiver-");
+            console.log("-payment receiver created-");
 
             // there seriously has to be a better way to do this....
             // 'description' is used to track internal order id
@@ -126,13 +163,15 @@
         this._pendingConfirmation = [];
         this._paymentReceiver = null;
 
-    	this.checkoutActive = false;
+    	this.initialized = false;
+        this.checkoutActive = false;
         this.paymentWindowActive = false;
         this.socketConnected = false;
 
         this.provider = 'https://dev-test.dash.org';
 
-        
+        this._cachedPrice = null;
+
         // document handlers
 
         // on document.ready
@@ -145,7 +184,8 @@
     Checkout.prototype.init = function(opts, paymentReceiver, socket, cb) {
         var self = this;
 
-	this.network = opts.network || 'testnet';
+	    this.network = opts.network || 'testnet';
+
         this.confirmations = opts.confirmations || 1;
 
         this.socket = socket;
@@ -167,6 +207,8 @@
         // if socket is passed connect and subscribe to paymentReceiver.dash_payment_address
 
         if(socket) this.socketConnected = this.initSocket(paymentReceiver.dash_payment_address);
+
+        this.initialized = true;
 
         cb(null,self);
     };
@@ -297,25 +339,50 @@
 
     };
 
-
-    // Currency Update
-
     Checkout.prototype.resetCurrency = function() {
+        var cachedPrice = this._cachedPrice;
 
         if (this.checkoutActive) {
-            jQuery('.dashTotal').remove();
-            jQuery('.woocommerce-Price-amount').removeClass("hidden");
 
-            this.checkoutActive = false;
+            // TODO -- pull function into .init function
+
+            jQuery('.amount').each(function() {
+
+                jQuery(this).html(cachedPrice);
+
+                this.checkoutActive = false;
+
+            });
+
         }
     };
 
     Checkout.prototype.setCurrency = function() {
+        var self = this;
+
+        var opts = { expiry: 300 }; // price expiry = 5 minutes
 
         if (!this.checkoutActive) {
 
+            this.getExchangeRate(opts, function(err, res) {
 
-            this.checkoutActive = true;
+                // TODO -- pull function into .init function
+
+                jQuery('#order_review .amount').each(function() {
+
+                    var price = Number(jQuery(this).text().replace(/[^0-9\.]+/g,""));
+                    var dashPrice = parseFloat(price/res.value).toFixed(2);
+
+                    self._cachedPrice = jQuery(this).html();
+
+                    jQuery(this).html(dashPrice + ' <span class="woocommerce-Price-currencySymbol"> DASH</span> <div class="siteCurrency">' + self._cachedPrice + '</div>');
+
+                    self.checkoutActive = true;
+
+                });
+
+            });
+
         }
     };
     

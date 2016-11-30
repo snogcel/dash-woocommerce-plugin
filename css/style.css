@@ -10,3 +10,7 @@
 #address span a.morelink {
     color: #999 !important;
 }
+
+.siteCurrency {
+    opacity:0.5;
+}
