@@ -50,6 +50,12 @@ class SPYR_AuthorizeNet_AIM extends WC_Payment_Gateway {
 		add_action( 'verify_receiver', array( $this, 'verify_response' ) );
 		add_action( 'site_currency', array( $this, 'return_currency' ) );
 
+        // get order_id from address
+		add_action( 'get_order_id', array( $this, 'get_order_id' ) );
+
+
+
+
 		// Save settings
 		if ( is_admin() ) {
 			// Versions over 2.0
@@ -121,6 +127,9 @@ class SPYR_AuthorizeNet_AIM extends WC_Payment_Gateway {
             // verify_response($_POST)
             do_action( 'verify_receiver', $_POST );
             exit;
+        } else if ( isset( $_POST['get_order_id'] ) ) {
+            do_action( 'get_order_id', $_POST );
+            exit;
         } else if ( isset( $_POST['site_currency'] ) ) {
             // return_currency($_POST)
             do_action( 'site_currency', $_POST );
@@ -132,6 +141,74 @@ class SPYR_AuthorizeNet_AIM extends WC_Payment_Gateway {
         }
 
     }
+
+    public function get_order_id( $post_data ) {
+        global $wpdb;
+
+        $querystr = "
+            SELECT $wpdb->posts.id, $wpdb->postmeta.meta_key, $wpdb->postmeta.meta_value
+            FROM $wpdb->posts, $wpdb->postmeta
+            WHERE $wpdb->posts.ID = $wpdb->postmeta.post_id
+            AND $wpdb->postmeta.meta_value = 'yTg2oym3oCQQAQfyHx5ELdp11vUA3NbYsc'
+            AND ( $wpdb->postmeta.meta_key = 'receiver_id'
+              OR $wpdb->postmeta.meta_key = 'username'
+              OR $wpdb->postmeta.meta_key = 'dash_payment_address'
+              OR $wpdb->postmeta.meta_key = 'amount_fiat'
+              OR $wpdb->postmeta.meta_key = 'type_fiat'
+              OR $wpdb->postmeta.meta_key = 'base_fiat'
+              OR $wpdb->postmeta.meta_key = 'amount_duffs'
+              OR $wpdb->postmeta.meta_key = 'description'
+            ) ORDER BY $wpdb->posts.post_date DESC
+         ";
+
+         $querystr = "
+                     SELECT $wpdb->posts.id, $wpdb->postmeta.meta_key, $wpdb->postmeta.meta_value
+                     FROM $wpdb->posts, $wpdb->postmeta
+                     WHERE $wpdb->posts.ID = $wpdb->postmeta.post_id
+                     AND $wpdb->postmeta.meta_value = '" . $post_data['dash_payment_address'] . "'
+                     ORDER BY $wpdb->posts.post_date DESC
+                  ";
+
+        $order_id = $wpdb->get_results($querystr, OBJECT);
+
+         echo json_encode($order_id);
+
+    }
+
+    public function get_order( $post_data ) {
+            global $wpdb;
+
+            $querystr = "
+                SELECT $wpdb->posts.id, $wpdb->postmeta.meta_key, $wpdb->postmeta.meta_value
+                FROM $wpdb->posts, $wpdb->postmeta
+                WHERE $wpdb->posts.ID = $wpdb->postmeta.post_id
+                AND $wpdb->postmeta.meta_value = 'yTg2oym3oCQQAQfyHx5ELdp11vUA3NbYsc'
+                AND ( $wpdb->postmeta.meta_key = 'receiver_id'
+                  OR $wpdb->postmeta.meta_key = 'username'
+                  OR $wpdb->postmeta.meta_key = 'dash_payment_address'
+                  OR $wpdb->postmeta.meta_key = 'amount_fiat'
+                  OR $wpdb->postmeta.meta_key = 'type_fiat'
+                  OR $wpdb->postmeta.meta_key = 'base_fiat'
+                  OR $wpdb->postmeta.meta_key = 'amount_duffs'
+                  OR $wpdb->postmeta.meta_key = 'description'
+                ) ORDER BY $wpdb->posts.post_date DESC
+             ";
+
+             $querystr = "
+                         SELECT $wpdb->posts.id, $wpdb->postmeta.meta_key, $wpdb->postmeta.meta_value
+                         FROM $wpdb->posts, $wpdb->postmeta
+                         WHERE $wpdb->posts.ID = $wpdb->postmeta.post_id
+                         AND $wpdb->postmeta.meta_value = '" . $post_data['dash_payment_address'] . "'
+                         ORDER BY $wpdb->posts.post_date DESC
+                      ";
+
+            $order_id = $wpdb->get_results($querystr, OBJECT);
+
+             echo json_encode($order_id);
+
+    }
+
+
 
     public function return_currency( $request ) {
 
@@ -165,9 +242,24 @@ class SPYR_AuthorizeNet_AIM extends WC_Payment_Gateway {
 
     public function valid_response( $receiverCallback ) {
 
+        global $wpdb;
+
+
     // handle post response
+
+    // lookup by address
+
+        $querystr = "
+                 SELECT $wpdb->posts.id, $wpdb->postmeta.meta_key, $wpdb->postmeta.meta_value
+                 FROM $wpdb->posts, $wpdb->postmeta
+                 WHERE $wpdb->posts.ID = $wpdb->postmeta.post_id
+                 AND $wpdb->postmeta.meta_value = '" . $receiverCallback['dash_payment_address'] . "'
+                 ORDER BY $wpdb->posts.post_date DESC
+                 ";
+
+        $order_id = $wpdb->get_row($querystr);
     
-    $customer_order = new WC_Order( $receiverCallback['description'] ); // TODO - set up external_id field?
+        $customer_order = new WC_Order( $order_id->id );
 
 	update_post_meta( $customer_order->id, 'txid', $receiverCallback['txid'] );
 	update_post_meta( $customer_order->id, 'txlock', var_export($receiverCallback['txlock'], true) ); // convert boolean to string
@@ -205,6 +297,8 @@ class SPYR_AuthorizeNet_AIM extends WC_Payment_Gateway {
 		    // Dashpay API Key and Credentials
 		    "api_key"              	=> $this->api_login,
 		    "email"                	=> $this->trans_key,
+
+            // TODO - description doesn't need to be included any more
 
 		    // Order Details
 		    "currency"              	=> "USD",
@@ -464,7 +558,7 @@ add_action( 'wp_enqueue_scripts', 'custom_style' );
 
 
 function dash_payment_service() {
-    wp_register_script('receiver', plugins_url('js/checkout.js', __FILE__), array('jquery'), 7.6, true);
+    wp_register_script('receiver', plugins_url('js/checkout.js', __FILE__), array('jquery'), 8.1, true);
 	wp_enqueue_script('receiver');
 }
 add_action( 'wp', 'dash_payment_service' );

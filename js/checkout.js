@@ -99,7 +99,6 @@
             console.log("-payment receiver created-");
 
             // there seriously has to be a better way to do this....
-            // 'description' is used to track internal order id
 
             var paymentReceiver = {
                 "receiver_id": jQuery('#receiver_id').text(),
@@ -112,30 +111,54 @@
                 "description": jQuery('#description').text()
             };
 
-            // Initialize Payment Receiver and (optional) Socket.io Listener
-            checkout.init(config, paymentReceiver, socket, function(err, checkout) {
 
-                // checkout has initialized
-                checkout.displayQRCode(function(err, res) {
+            // verify that the payment address exists and retrieve associated order_id
 
-                    jQuery("#modal").iziModal(config.paymentWindowOpts);
+            checkout.getOrderId(paymentReceiver.dash_payment_address, function(err, res) {
 
-                    jQuery('#qrcode').qrcode(res);
+                console.log(res[0]);
+                var orderId = res[0].id;
 
-                    jQuery('#modal').iziModal('open');
+                if(orderId && !err) {
 
-                    checkout.paymentWindowActive = true;
+                    // set checkout orderId
+                    checkout._orderId = orderId;
 
-                    checkout.verifyTransaction(
-                        config.transactionOpts,
-                        config.functions.transactionPending,
-                        config.functions.transactionReceived,
-                        config.functions.transactionConfirmed
-                    ); // begin polling insight for tx confirmations
+                    // Initialize Payment Receiver and (optional) Socket.io Listener
+                    checkout.init(config, paymentReceiver, socket, function(err, checkout) {
 
-                });
+                        // checkout has initialized
+                        checkout.displayQRCode(function(err, res) {
+
+                            jQuery("#modal").iziModal(config.paymentWindowOpts);
+
+                            jQuery('#qrcode').qrcode(res);
+
+                            jQuery('#modal').iziModal('open');
+
+                            checkout.paymentWindowActive = true;
+
+                            checkout.verifyTransaction(
+                                config.transactionOpts,
+                                config.functions.transactionPending,
+                                config.functions.transactionReceived,
+                                config.functions.transactionConfirmed
+                            ); // begin polling insight for tx confirmations
+
+                        });
+
+                    });
+
+                } else {
+
+                    console.log("error: order not found for: " + paymentReceiver.dash_payment_address);
+
+                }
+
 
             });
+
+
 
         }
 
@@ -162,6 +185,7 @@
         this._cache = [];
         this._pendingConfirmation = [];
         this._paymentReceiver = null;
+        this._orderId = null; // external_id for Payment Receiver
 
     	this.initialized = false;
         this.checkoutActive = false;
@@ -520,7 +544,22 @@
             route: "?wc-api=spyr_authorizenet_aim",
             data: {
                 receiver_status: true,
-                order_id: this._paymentReceiver.description
+                order_id: this._orderId
+            }
+        };
+
+        this._fetch(opts, cb);
+    };
+
+    Checkout.prototype.getOrderId = function(address, cb) {
+
+        var opts = {
+            type: "POST",
+            provider: "/",
+            route: "?wc-api=spyr_authorizenet_aim",
+            data: {
+                get_order_id: true,
+                dash_payment_address: address
             }
         };
 
