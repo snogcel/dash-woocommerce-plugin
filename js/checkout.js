@@ -77,6 +77,7 @@
                 if (jQuery(this).val() == 'spyr_authorizenet_aim') {
                     checkout.setCurrency();
                 } else {
+                    checkout.checkoutActive = false;
                     checkout.resetCurrency();
                 }
             });
@@ -85,6 +86,7 @@
                 if (jQuery(this).val() == 'spyr_authorizenet_aim') {
                     checkout.setCurrency();
                 } else {
+                    checkout.checkoutActive = false;
                     checkout.resetCurrency();
                 }
             });
