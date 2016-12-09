@@ -52,6 +52,7 @@ class SPYR_AuthorizeNet_AIM extends WC_Payment_Gateway {
 
         // get order_id from address
 		add_action( 'get_order_id', array( $this, 'get_order_id' ) );
+		add_action( 'confirm_transaction', array( $this, 'confirm_transaction' ) );
 
 
 
@@ -130,6 +131,9 @@ class SPYR_AuthorizeNet_AIM extends WC_Payment_Gateway {
         } else if ( isset( $_POST['get_order_id'] ) ) {
             do_action( 'get_order_id', $_POST );
             exit;
+        } else if ( isset( $_POST['confirm_transaction'] ) ) {
+                    do_action( 'confirm_transaction', $_POST );
+                    exit;
         } else if ( isset( $_POST['site_currency'] ) ) {
             // return_currency($_POST)
             do_action( 'site_currency', $_POST );
@@ -175,6 +179,72 @@ class SPYR_AuthorizeNet_AIM extends WC_Payment_Gateway {
 
     }
 
+    public function confirm_transaction( $post_data ) {
+        global $wpdb;
+
+        // get order_id by receiver_id
+        $querystr = "
+                 SELECT $wpdb->posts.id, $wpdb->postmeta.meta_key, $wpdb->postmeta.meta_value
+                 FROM $wpdb->posts, $wpdb->postmeta
+                 WHERE $wpdb->posts.ID = $wpdb->postmeta.post_id
+                 AND $wpdb->postmeta.meta_value = '" . $post_data['receiver_id'] . "'
+                 ORDER BY $wpdb->posts.post_date DESC
+              ";
+
+        $result = $wpdb->get_results($querystr, OBJECT);
+        $order_id = $result[0]->id;
+
+        // verify that returned order_id equals $post_data['order_id')
+        if ($order_id == $post_data['order_id']) {
+
+                // Get order by order_id
+                $customer_order = new WC_Order( $order_id );
+
+                $status = $customer_order->status;
+                $address = get_post_meta( $customer_order->id, 'dash_payment_address', true );
+                $return_url = get_post_meta( $customer_order->id, 'return_url', true );
+
+                $response = wp_remote_get( 'https://dev-test.dash.org/insight-api-dash/tx/' . $post_data['txid'] );
+
+                try {
+
+                    // Note that we decode the body's response since it's the actual JSON feed
+                    $json = json_decode( $response['body'], true );
+                    $confirmations = $json['confirmations'];
+
+                } catch ( Exception $ex ) {
+                    $confirmations = null;
+                } // end try/catch
+
+                if ($confirmations > 0) { // TODO - configurable number of confirmations
+
+                    $customer_order->update_status( 'completed' );
+                    $status = $customer_order->status;
+
+                }
+
+        } else {
+
+                $customer_order = null;
+
+                $status = null;
+                $address = null;
+                $return_url = null;
+
+                $confirmations = null;
+
+        }
+
+        // get number of confirmations from insight-api-dash
+
+        // TODO - grab from plugin settings
+
+
+
+        echo json_encode(array("order_id"=>$order_id, "address"=>$address, "confirmations"=>$confirmations, "status"=>$status));
+
+    }
+
     public function get_order( $post_data ) {
             global $wpdb;
 
@@ -204,7 +274,7 @@ class SPYR_AuthorizeNet_AIM extends WC_Payment_Gateway {
 
             $order_id = $wpdb->get_results($querystr, OBJECT);
 
-             echo json_encode($order_id);
+            echo json_encode($order_id);
 
     }
 
@@ -558,7 +628,7 @@ add_action( 'wp_enqueue_scripts', 'custom_style' );
 
 
 function dash_payment_service() {
-    wp_register_script('receiver', plugins_url('js/checkout.js', __FILE__), array('jquery'), 8.1, true);
+    wp_register_script('receiver', plugins_url('js/checkout.js', __FILE__), array('jquery'), 8.2, true);
 	wp_enqueue_script('receiver');
 }
 add_action( 'wp', 'dash_payment_service' );
