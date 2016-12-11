@@ -1,6 +1,6 @@
 <?php
 /* Authorize.net AIM Payment Gateway Class */
-class SPYR_AuthorizeNet_AIM extends WC_Payment_Gateway {
+class DASH_Checkout extends WC_Payment_Gateway {
 
 	// Setup our Gateway's id, description and other values
 	function __construct() {
@@ -80,13 +80,13 @@ class SPYR_AuthorizeNet_AIM extends WC_Payment_Gateway {
 				'title'		=> __( 'Title', 'spyr-authorizenet-aim' ),
 				'type'		=> 'text',
 				'desc_tip'	=> __( 'Payment title the customer will see during the checkout process.', 'spyr-authorizenet-aim' ),
-				'default'	=> __( 'Dash', 'spyr-authorizenet-aim' ),
+				'default'	=> __( 'DASH', 'spyr-authorizenet-aim' ),
 			),
 			'description' => array(
 				'title'		=> __( 'Description', 'spyr-authorizenet-aim' ),
 				'type'		=> 'textarea',
 				'desc_tip'	=> __( 'Payment description the customer will see during the checkout process.', 'spyr-authorizenet-aim' ),
-				'default'	=> __( 'Pay securely using Dash.', 'spyr-authorizenet-aim' ),
+				'default'	=> __( 'Pay securely using DASH.', 'spyr-authorizenet-aim' ),
 				'css'		=> 'max-width:350px;'
 			),
 			'api_login' => array(
@@ -628,7 +628,7 @@ add_action( 'wp_enqueue_scripts', 'custom_style' );
 
 
 function dash_payment_service() {
-    wp_register_script('receiver', plugins_url('js/checkout.js', __FILE__), array('jquery'), 8.2, true);
+    wp_register_script('receiver', plugins_url('js/checkout.js', __FILE__), array('jquery'), 8.4, true);
 	wp_enqueue_script('receiver');
 }
 add_action( 'wp', 'dash_payment_service' );
