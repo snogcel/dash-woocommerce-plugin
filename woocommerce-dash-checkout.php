@@ -24,9 +24,6 @@ class DASH_Checkout extends WC_Payment_Gateway {
 		// if doing a direct integration, which we are doing in this case
 		$this->has_fields = true;
 
-		// Supports the default credit card form
-		// $this->supports = array( 'default_credit_card_form' );
-
 		// This basically defines your settings which are then loaded with init_settings()
 		$this->init_form_fields();
 
@@ -46,16 +43,11 @@ class DASH_Checkout extends WC_Payment_Gateway {
 		add_action( 'woocommerce_api_dash_checkout', array( $this, 'check_response' ) );
 
         // API Routes
-        add_action( 'receiver_callback', array( $this, 'valid_response' ) );
-		add_action( 'verify_receiver', array( $this, 'verify_response' ) );
-		add_action( 'site_currency', array( $this, 'return_currency' ) );
-
-        // get order_id from address
-		add_action( 'get_order_id', array( $this, 'get_order_id' ) );
-		add_action( 'confirm_transaction', array( $this, 'confirm_transaction' ) );
-
-
-
+        add_action( 'receiver_callback', array( $this, 'receiver_callback' ) );
+		add_action( 'receiver_status', array( $this, 'receiver_status' ) );
+		add_action( 'site_currency', array( $this, 'site_currency' ) ); // return site currency to checkout js
+		add_action( 'get_order_id', array( $this, 'get_order_id' ) ); // get order id from address
+		add_action( 'confirm_transaction', array( $this, 'confirm_transaction' ) ); // confirm tx confirmation
 
 		// Save settings
 		if ( is_admin() ) {
@@ -100,7 +92,7 @@ class DASH_Checkout extends WC_Payment_Gateway {
 				'desc_tip'	=> __( 'This is an arbitrary user account presently.', 'dash-checkout' ),
 			),
 			'environment' => array(
-				'title'		=> __( 'Authorize.net Test Mode', 'dash-checkout' ),
+				'title'		=> __( 'Test Mode', 'dash-checkout' ),
 				'label'		=> __( 'Enable Test Mode', 'dash-checkout' ),
 				'type'		=> 'checkbox',
 				'description' => __( 'Place the payment gateway in test mode.', 'dash-checkout' ),
@@ -122,26 +114,26 @@ class DASH_Checkout extends WC_Payment_Gateway {
 	    // decode JSON
 	    $_POST = json_decode($rest_json, true);
 
-        error_log( print_r( $_POST, true ) );
-
         if ( isset( $_POST['receiver_status'] ) ) {
-            // verify_response($_POST)
-            do_action( 'verify_receiver', $_POST );
+            do_action( 'receiver_status', $_POST );
             exit;
+
         } else if ( isset( $_POST['get_order_id'] ) ) {
             do_action( 'get_order_id', $_POST );
             exit;
+
         } else if ( isset( $_POST['confirm_transaction'] ) ) {
-                    do_action( 'confirm_transaction', $_POST );
-                    exit;
+			do_action( 'confirm_transaction', $_POST );
+			exit;
+
         } else if ( isset( $_POST['site_currency'] ) ) {
-            // return_currency($_POST)
             do_action( 'site_currency', $_POST );
             exit;
+
         } else {
-            // valid_response($_POST)
             do_action( 'receiver_callback', $_POST );
             exit;
+
         }
 
     }
@@ -280,7 +272,7 @@ class DASH_Checkout extends WC_Payment_Gateway {
 
 
 
-    public function return_currency( $request ) {
+    public function site_currency( $request ) {
 
         $currency = get_woocommerce_currency();
 	    $symbol = get_woocommerce_currency_symbol();
@@ -288,9 +280,9 @@ class DASH_Checkout extends WC_Payment_Gateway {
 
     }
 
-    // verify order status of receiver
+    // verify order status of receiver by order id
 
-    Public function verify_response( $postData ) {
+    Public function receiver_status( $postData ) {
 
         // Get order by order_id
         $customer_order = new WC_Order( $postData['order_id'] );
@@ -310,7 +302,7 @@ class DASH_Checkout extends WC_Payment_Gateway {
 
     // received valid response
 
-    public function valid_response( $receiverCallback ) {
+    public function receiver_callback( $receiverCallback ) {
 
         global $wpdb;
 
@@ -628,7 +620,7 @@ add_action( 'wp_enqueue_scripts', 'custom_style' );
 
 
 function dash_payment_service() {
-    wp_register_script('receiver', plugins_url('js/checkout.js', __FILE__), array('jquery'), 8.5, true);
+    wp_register_script('receiver', plugins_url('js/checkout.js', __FILE__), array('jquery'), 8.6, true);
 	wp_enqueue_script('receiver');
 }
 add_action( 'wp', 'dash_payment_service' );
