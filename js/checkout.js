@@ -322,7 +322,6 @@
         setInterval( function() {
             self.getReceiverStatus(function(err, res) {
 
-
                 if (i < opts.pendingNotificationInterval) {
                     i++;
                 } else {
@@ -342,6 +341,7 @@
 
                 }
                 if (res.txid) {
+
                     self.getTx(res.txid, function(err, result) { // fetch tx from insight-api
 
                         if (result.confirmations < opts.confirmations) {
@@ -352,14 +352,22 @@
 
                         if (result.confirmations >= opts.confirmations) {
 
-                            console.log(opts.confirmations + ' confirmations for txid: ' + result.txid);
                             console.log(res);
 
-                            transactionConfirmed(res);
+                            self.confirmTransaction(
+                                self._paymentReceiver.receiver_id,
+                                self._paymentReceiver.dash_payment_address,
+                                result.txid,
+                                function(err, result) {
+                                    if(!err) transactionConfirmed(result); // result.return_url provided if sufficient confirmations
+                                });
 
                         }
+
                     });
+
                 }
+
             });
         }, opts.pollingInterval);
 
@@ -568,6 +576,22 @@
         this._fetch(opts, cb);
     };
 
+    Checkout.prototype.confirmTransaction = function(receiver_id, address, txid, cb) {
+
+        var opts = {
+            type: "POST",
+            provider: "/",
+            route: "?wc-api=dash_checkout",
+            data: {
+                confirm_transaction: true,
+                receiver_id: receiver_id,
+                dash_payment_address: address,
+                txid: txid
+            }
+        };
+
+        this._fetch(opts, cb);
+    };
 
     Checkout.prototype._fetch = function(opts,cb) {
         var self = this;

@@ -109,7 +109,7 @@ class DASH_Checkout extends WC_Payment_Gateway {
 	    $rest_json = file_get_contents("php://input");
 
 	    if( empty( $rest_json ) )
-                wp_die( 'PayPal Request Failure', 'PayPal IPN', array( 'response' => 500 ) );
+                wp_die( 'DASH Payment Receiver Callback Failure', 'Payment Receiver Callback', array( 'response' => 500 ) );
 
 	    // decode JSON
 	    $_POST = json_decode($rest_json, true);
@@ -142,37 +142,23 @@ class DASH_Checkout extends WC_Payment_Gateway {
         global $wpdb;
 
         $querystr = "
-            SELECT $wpdb->posts.id, $wpdb->postmeta.meta_key, $wpdb->postmeta.meta_value
-            FROM $wpdb->posts, $wpdb->postmeta
-            WHERE $wpdb->posts.ID = $wpdb->postmeta.post_id
-            AND $wpdb->postmeta.meta_value = 'yTg2oym3oCQQAQfyHx5ELdp11vUA3NbYsc'
-            AND ( $wpdb->postmeta.meta_key = 'receiver_id'
-              OR $wpdb->postmeta.meta_key = 'username'
-              OR $wpdb->postmeta.meta_key = 'dash_payment_address'
-              OR $wpdb->postmeta.meta_key = 'amount_fiat'
-              OR $wpdb->postmeta.meta_key = 'type_fiat'
-              OR $wpdb->postmeta.meta_key = 'base_fiat'
-              OR $wpdb->postmeta.meta_key = 'amount_duffs'
-              OR $wpdb->postmeta.meta_key = 'description'
-            ) ORDER BY $wpdb->posts.post_date DESC
-         ";
-
-         $querystr = "
-                     SELECT $wpdb->posts.id, $wpdb->postmeta.meta_key, $wpdb->postmeta.meta_value
-                     FROM $wpdb->posts, $wpdb->postmeta
-                     WHERE $wpdb->posts.ID = $wpdb->postmeta.post_id
-                     AND $wpdb->postmeta.meta_value = '" . $post_data['dash_payment_address'] . "'
-                     ORDER BY $wpdb->posts.post_date DESC
-                  ";
+                 SELECT $wpdb->posts.id, $wpdb->postmeta.meta_key, $wpdb->postmeta.meta_value
+                 FROM $wpdb->posts, $wpdb->postmeta
+                 WHERE $wpdb->posts.ID = $wpdb->postmeta.post_id
+                 AND $wpdb->postmeta.meta_value = '" . $post_data['dash_payment_address'] . "'
+                 ORDER BY $wpdb->posts.post_date DESC
+              ";
 
         $order_id = $wpdb->get_results($querystr, OBJECT);
 
-         echo json_encode($order_id);
+        echo json_encode($order_id);
 
     }
 
     public function confirm_transaction( $post_data ) {
         global $wpdb;
+
+        // TODO - grab from plugin settings
 
         // get order_id by receiver_id
         $querystr = "
@@ -186,91 +172,40 @@ class DASH_Checkout extends WC_Payment_Gateway {
         $result = $wpdb->get_results($querystr, OBJECT);
         $order_id = $result[0]->id;
 
-        // verify that returned order_id equals $post_data['order_id')
-        if ($order_id == $post_data['order_id']) {
+        // Get order by order_id
+        $customer_order = new WC_Order( $order_id );
 
-                // Get order by order_id
-                $customer_order = new WC_Order( $order_id );
+        $status = $customer_order->status;
+        $return_url = get_post_meta( $customer_order->id, 'return_url', true );
 
-                $status = $customer_order->status;
-                $address = get_post_meta( $customer_order->id, 'dash_payment_address', true );
-                $return_url = get_post_meta( $customer_order->id, 'return_url', true );
+        $response = wp_remote_get( 'https://dev-test.dash.org/insight-api-dash/tx/' . $post_data['txid'] );
 
-                $response = wp_remote_get( 'https://dev-test.dash.org/insight-api-dash/tx/' . $post_data['txid'] );
+        try {
 
-                try {
+            // Note that we decode the body's response since it's the actual JSON feed
+            $json = json_decode( $response['body'], true );
 
-                    // Note that we decode the body's response since it's the actual JSON feed
-                    $json = json_decode( $response['body'], true );
-                    $confirmations = $json['confirmations'];
+            $confirmations = $json['confirmations'];
 
-                } catch ( Exception $ex ) {
-                    $confirmations = null;
-                } // end try/catch
+            if ($confirmations > 0) { // TODO - configurable number of confirmations
 
-                if ($confirmations > 0) { // TODO - configurable number of confirmations
+                $customer_order->update_status( 'completed' );
 
-                    $customer_order->update_status( 'completed' );
-                    $status = $customer_order->status;
+                echo json_encode(array("order_id"=>$order_id, "return_url"=>$return_url, "confirmations"=>$confirmations, "status"=>$customer_order->status));
 
-                }
+            } else {
 
-        } else {
+                echo json_encode(array("order_id"=>$order_id, "confirmations"=>$confirmations, "status"=>$customer_order->status));
 
-                $customer_order = null;
+			}
 
-                $status = null;
-                $address = null;
-                $return_url = null;
+        } catch ( Exception $ex ) {
 
-                $confirmations = null;
+            echo json_encode(array("err"=>$ex));
 
         }
 
-        // get number of confirmations from insight-api-dash
-
-        // TODO - grab from plugin settings
-
-
-
-        echo json_encode(array("order_id"=>$order_id, "address"=>$address, "confirmations"=>$confirmations, "status"=>$status));
-
     }
-
-    public function get_order( $post_data ) {
-            global $wpdb;
-
-            $querystr = "
-                SELECT $wpdb->posts.id, $wpdb->postmeta.meta_key, $wpdb->postmeta.meta_value
-                FROM $wpdb->posts, $wpdb->postmeta
-                WHERE $wpdb->posts.ID = $wpdb->postmeta.post_id
-                AND $wpdb->postmeta.meta_value = 'yTg2oym3oCQQAQfyHx5ELdp11vUA3NbYsc'
-                AND ( $wpdb->postmeta.meta_key = 'receiver_id'
-                  OR $wpdb->postmeta.meta_key = 'username'
-                  OR $wpdb->postmeta.meta_key = 'dash_payment_address'
-                  OR $wpdb->postmeta.meta_key = 'amount_fiat'
-                  OR $wpdb->postmeta.meta_key = 'type_fiat'
-                  OR $wpdb->postmeta.meta_key = 'base_fiat'
-                  OR $wpdb->postmeta.meta_key = 'amount_duffs'
-                  OR $wpdb->postmeta.meta_key = 'description'
-                ) ORDER BY $wpdb->posts.post_date DESC
-             ";
-
-             $querystr = "
-                         SELECT $wpdb->posts.id, $wpdb->postmeta.meta_key, $wpdb->postmeta.meta_value
-                         FROM $wpdb->posts, $wpdb->postmeta
-                         WHERE $wpdb->posts.ID = $wpdb->postmeta.post_id
-                         AND $wpdb->postmeta.meta_value = '" . $post_data['dash_payment_address'] . "'
-                         ORDER BY $wpdb->posts.post_date DESC
-                      ";
-
-            $order_id = $wpdb->get_results($querystr, OBJECT);
-
-            echo json_encode($order_id);
-
-    }
-
-
 
     public function site_currency( $request ) {
 
@@ -280,8 +215,7 @@ class DASH_Checkout extends WC_Payment_Gateway {
 
     }
 
-    // verify order status of receiver by order id
-
+    // retrieve order status by order id
     Public function receiver_status( $postData ) {
 
         // Get order by order_id
@@ -295,22 +229,20 @@ class DASH_Checkout extends WC_Payment_Gateway {
         $txlock = get_post_meta( $customer_order->id, 'txlock', true ); // txlock (InstantSend)
         $amount_duffs = get_post_meta( $customer_order->id, 'amount_duffs', true );
 
-
-        echo json_encode(array("order_status"=>$status, "return_url"=>$return_url, "txid"=>$txid, "txlock"=>$txlock, "amount_duffs"=>$amount_duffs));
+		if ($txlock == 'true') {
+            echo json_encode(array("order_status"=>$status, "return_url"=>$return_url, "txid"=>$txid, "txlock"=>$txlock, "amount_duffs"=>$amount_duffs));
+		} else {
+            echo json_encode(array("order_status"=>$status, "txid"=>$txid, "txlock"=>$txlock, "amount_duffs"=>$amount_duffs));
+		}
 
     }
 
-    // received valid response
-
+    // process Payment Receiver Callback
     public function receiver_callback( $receiverCallback ) {
 
         global $wpdb;
 
-
-    // handle post response
-
-    // lookup by address
-
+        // lookup order by payment receiver address
         $querystr = "
                  SELECT $wpdb->posts.id, $wpdb->postmeta.meta_key, $wpdb->postmeta.meta_value
                  FROM $wpdb->posts, $wpdb->postmeta
@@ -320,21 +252,23 @@ class DASH_Checkout extends WC_Payment_Gateway {
                  ";
 
         $order_id = $wpdb->get_row($querystr);
-    
         $customer_order = new WC_Order( $order_id->id );
 
-	update_post_meta( $customer_order->id, 'txid', $receiverCallback['txid'] );
-	update_post_meta( $customer_order->id, 'txlock', var_export($receiverCallback['txlock'], true) ); // convert boolean to string
+	    update_post_meta( $customer_order->id, 'txid', $receiverCallback['txid'] );
+	    update_post_meta( $customer_order->id, 'txlock', var_export($receiverCallback['txlock'], true) ); // convert boolean to string
 
-	// check if correct amount paid
+    	// check if correct amount paid
+	    $amount_duffs = get_post_meta( $customer_order->id, 'amount_duffs', true );
 
-	$amount_duffs = get_post_meta( $customer_order->id, 'amount_duffs', true );
+        if ($receiverCallback['payment_received_amount_duffs'] == $amount_duffs) {
 
-//	if ($receiverCallback['payment_received_amount_duffs'] == $amount_duffs) {
-		$customer_order->payment_complete(); // zero confirmation - marks payment as "processing"
-//	} else {
-//		$customer_order->update_status('on-hold', __('Incorrect Payment Amount', 'dash_checkout'));
-//	}
+		    $customer_order->update_status( 'processing' );
+
+	    } else {
+
+            $customer_order->update_status( 'on-hold' );
+
+    	}
 
     }
 
@@ -349,6 +283,8 @@ class DASH_Checkout extends WC_Payment_Gateway {
 		// Are we testing right now or is it a real transaction
 		$environment = ( $this->environment == "yes" ) ? 'TRUE' : 'FALSE';
 
+		// TODO get from plugin setting
+
 		// Decide which URL to post to
 		$environment_url = ( "FALSE" == $environment )
 						   ? 'https://dev-test.dash.org/dash-payment-service/createReceiver'
@@ -360,68 +296,16 @@ class DASH_Checkout extends WC_Payment_Gateway {
 		    "api_key"              	=> $this->api_login,
 		    "email"                	=> $this->trans_key,
 
-            // TODO - description doesn't need to be included any more
-
 		    // Order Details
 		    "currency"              	=> "USD",
 		    "amount"             	    => $customer_order->order_total,
-		    "description"        	    => str_replace( "#", "", $customer_order->get_order_number() ),
 
 		    // Callback URL
 		    "callbackUrl"           	=> WC()->api_request_url( 'dash_checkout' )
-
-
-			// Authorize.net Credentials and API Info
-			//"x_tran_key"           	=> $this->trans_key,
-			//"x_login"              	=> $this->api_login,
-			//"x_version"            	=> "3.1",
-
-			// Order total
-			//"x_amount"             	=> $customer_order->order_total,
-
-			// Credit Card Information
-			//"x_card_num"           	=> str_replace( array(' ', '-' ), '', $_POST['dash_checkout-card-number'] ),
-			//"x_card_code"          	=> ( isset( $_POST['dash_checkout-card-cvc'] ) ) ? $_POST['dash_checkout-card-cvc'] : '',
-			//"x_exp_date"           	=> str_replace( array( '/', ' '), '', $_POST['dash_checkout-card-expiry'] ),
-
-			//"x_type"               	=> 'AUTH_CAPTURE',
-			//"x_invoice_num"        	=> str_replace( "#", "", $customer_order->get_order_number() ),
-			//"x_test_request"       	=> $environment,
-			//"x_delim_char"         	=> '|',
-			//"x_encap_char"         	=> '',
-			//"x_delim_data"         	=> "TRUE",
-			//"x_relay_response"     	=> "FALSE",
-			//"x_method"             	=> "CC",
-
-			// Billing Information
-			//"x_first_name"         	=> $customer_order->billing_first_name,
-			//"x_last_name"          	=> $customer_order->billing_last_name,
-			//"x_address"            	=> $customer_order->billing_address_1,
-			//"x_city"              	=> $customer_order->billing_city,
-			//"x_state"              	=> $customer_order->billing_state,
-			//"x_zip"                	=> $customer_order->billing_postcode,
-			//"x_country"            	=> $customer_order->billing_country,
-			//"x_phone"              	=> $customer_order->billing_phone,
-			//"x_email"              	=> $customer_order->billing_email,
-
-			// Shipping Information
-			//"x_ship_to_first_name" 	=> $customer_order->shipping_first_name,
-			//"x_ship_to_last_name"  	=> $customer_order->shipping_last_name,
-			//"x_ship_to_company"    	=> $customer_order->shipping_company,
-			//"x_ship_to_address"    	=> $customer_order->shipping_address_1,
-			//"x_ship_to_city"       	=> $customer_order->shipping_city,
-			//"x_ship_to_country"    	=> $customer_order->shipping_country,
-			//"x_ship_to_state"      	=> $customer_order->shipping_state,
-			//"x_ship_to_zip"        	=> $customer_order->shipping_postcode,
-
-			// Some Customer Information
-			//"x_cust_id"            	=> $customer_order->user_id,
-			//"x_customer_ip"        	=> $_SERVER['REMOTE_ADDR'],
-
 		);
 
 
-		// Send this payload to Authorize.net for processing
+		// Send this payload to Dash Payment Service for processing
 		$response = wp_remote_post( $environment_url, array(
 			'method'    => 'POST',
 			'body'      => http_build_query( $payload ),
@@ -430,10 +314,10 @@ class DASH_Checkout extends WC_Payment_Gateway {
 		) );
 
 		if ( is_wp_error( $response ) )
-			throw new Exception( __( 'We are currently experiencing problems trying to connect to this payment gateway. Sorry for the inconvenience.', 'dash-checkout' ) );
+			throw new Exception( __( 'We are currently experiencing problems trying to connect to Dash Payment Service. Sorry for the inconvenience.', 'dash-checkout' ) );
 
 		if ( empty( $response['body'] ) )
-			throw new Exception( __( 'Authorize.net\'s Response was empty.', 'dash-checkout' ) );
+			throw new Exception( __( 'Dash Payment Service Response was empty.', 'dash-checkout' ) );
 
 		// Retrieve the body's resopnse if no errors found
 		$json = wp_remote_retrieve_body( $response );
@@ -443,7 +327,8 @@ class DASH_Checkout extends WC_Payment_Gateway {
 
 		$json = json_decode( $json, true );
 
-	    // add order note with Payment Receiver metadata
+	    // store Payment Receiver into Order Meta
+
     	update_post_meta( $customer_order->id, 'receiver_id', $json['receiver_id'] );
     	update_post_meta( $customer_order->id, 'username', $json['username'] );
     	update_post_meta( $customer_order->id, 'dash_payment_address', $json['dash_payment_address'] );
@@ -451,115 +336,62 @@ class DASH_Checkout extends WC_Payment_Gateway {
     	update_post_meta( $customer_order->id, 'type_fiat', $json['type_fiat'] );
     	update_post_meta( $customer_order->id, 'base_fiat', $json['base_fiat'] );
     	update_post_meta( $customer_order->id, 'amount_duffs', $json['amount_duffs'] );
-    	update_post_meta( $customer_order->id, 'description', $json['description'] );
 
     	update_post_meta( $customer_order->id, 'return_url', $this->get_return_url( $customer_order ) );
 
 
-	    // Mark order as Paid
-		// $customer_order->payment_complete();
+        // inject Payment Receiver into checkout page
 
-	    // Empty the cart (Very important step)
-		// $woocommerce->cart->empty_cart();
+        $response = '<span><strong>Payment Receiver Created</strong></span>';
+        $response .= '<span class="hidden" id="order_id">' . $customer_order->get_order_number() . '</span>';
 
-	    // Redirect to thank you page
+        $response .= '<span class="hidden" id="receiver_id">' . $json["receiver_id"] . '</span>';
+        $response .= '<span class="hidden" id="username">' . $json["username"] . '</span>';
+        $response .= '<span class="hidden" id="dash_payment_address">' . $json["dash_payment_address"] . '</span>';
+        $response .= '<span class="hidden" id="amount_fiat">' . $json["amount_fiat"] . '</span>';
+        $response .= '<span class="hidden" id="type_fiat">' . $json["type_fiat"] . '</span>';
+        $response .= '<span class="hidden" id="base_fiat">' . $json["base_fiat"] . '</span>';
+        $response .= '<span class="hidden" id="amount_duffs">' . $json["amount_duffs"] . '</span>';
 
-		if (0) { // query internal API to see if payment receiver has been paid
+        $response .= '<span class="hidden" id="return_url">' . $this->get_return_url( $customer_order ) . '</span>';
 
-        		return array(
-            			'result'   => 'success',
-            			'redirect' => $this->get_return_url( $customer_order ),
-        		);
+        $amount_dash = round($json["amount_duffs"]/100000000, 2);
+        $amount_dots = round($json["amount_duffs"]/100, 2);
 
-		} else { // waiting for payment receiver
+        $dialog_box =  '<div id="modal">';
+        $dialog_box .= '    <!-- Page content -->';
+        $dialog_box .= '    <div class="row">';
+        $dialog_box .= '        <div class="col-xs-12 col-md-6">';
+        $dialog_box .= '            <div id="qrcode"></div>';
+        $dialog_box .= '        </div>';
+        $dialog_box .= '        <div class="col-xs-12 col-md-6">';
+        $dialog_box .= '            <div class="form-group row">';
+        $dialog_box .= '                <label class="col-form-label formLabel formLabel_amount" id="formatted_dash">' . $amount_dash . ' DASH</label>';
+        $dialog_box .= '                <span class="formValue" id="formatted_duffs>' . $amount_dots . ' dots</span><br />';
+        $dialog_box .= '            </div>';
+        $dialog_box .= '            <div class="form-group row">';
+        $dialog_box .= '                <label class="col-form-label formLabel">Status</label>';
+        $dialog_box .= '                <span class="formValue" id="checkout_status">Pending</span>';
+        $dialog_box .= '            </div>';
+        $dialog_box .= '        </div>';
+        $dialog_box .= '    </div>';
+        $dialog_box .= '    <div class="row">';
+        $dialog_box .= '        <div class="col-xs-12">';
+        $dialog_box .= '            <div><strong>Address: </strong><span class="formLabel_address">' . $json["dash_payment_address"] . '</span></div>';
+        $dialog_box .= '        </div>';
+        $dialog_box .= '    </div>';
+        $dialog_box .= '</div>';
 
-            $response = '<span><strong>Payment Receiver Created</strong></span>';
-            $response .= '<span class="hidden" id="order_id">' . $customer_order->get_order_number() . '</span>';
+        $response .= $dialog_box;
 
-            $response .= '<span class="hidden" id="receiver_id">' . $json["receiver_id"] . '</span>';
-            $response .= '<span class="hidden" id="username">' . $json["username"] . '</span>';
-            $response .= '<span class="hidden" id="dash_payment_address">' . $json["dash_payment_address"] . '</span>';
-            $response .= '<span class="hidden" id="amount_fiat">' . $json["amount_fiat"] . '</span>';
-            $response .= '<span class="hidden" id="type_fiat">' . $json["type_fiat"] . '</span>';
-            $response .= '<span class="hidden" id="base_fiat">' . $json["base_fiat"] . '</span>';
-            $response .= '<span class="hidden" id="amount_duffs">' . $json["amount_duffs"] . '</span>';
-            $response .= '<span class="hidden" id="description">' . $json["description"] . '</span>';
+        wc_add_notice( $response, 'notice' );
 
-            $response .= '<span class="hidden" id="return_url">' . $this->get_return_url( $customer_order ) . '</span>';
+        return array(
+            'result'   => 'success',
+            'refresh'   => 'true'
+        );
 
-            $amount_dash = round($json["amount_duffs"]/100000000, 2);
-            $amount_dots = round($json["amount_duffs"]/100, 2);
-
-            $dialog_box =  '<div id="modal">';
-            $dialog_box .= '    <!-- Page content -->';
-            $dialog_box .= '    <div class="row">';
-            $dialog_box .= '        <div class="col-xs-12 col-md-6">';
-            $dialog_box .= '            <div id="qrcode"></div>';
-            $dialog_box .= '        </div>';
-            $dialog_box .= '        <div class="col-xs-12 col-md-6">';
-            $dialog_box .= '            <div class="form-group row">';
-            $dialog_box .= '                <label class="col-form-label formLabel formLabel_amount" id="formatted_dash">' . $amount_dash . ' DASH</label>';
-            $dialog_box .= '                <span class="formValue" id="formatted_duffs>' . $amount_dots . ' dots</span><br />';
-            $dialog_box .= '            </div>';
-            $dialog_box .= '            <div class="form-group row">';
-            $dialog_box .= '                <label class="col-form-label formLabel">Status</label>';
-            $dialog_box .= '                <span class="formValue" id="checkout_status">Pending</span>';
-            $dialog_box .= '            </div>';
-            $dialog_box .= '        </div>';
-            $dialog_box .= '    </div>';
-            $dialog_box .= '    <div class="row">';
-            $dialog_box .= '        <div class="col-xs-12">';
-            $dialog_box .= '            <div><strong>Address: </strong><span class="formLabel_address">' . $json["dash_payment_address"] . '</span></div>';
-            $dialog_box .= '        </div>';
-            $dialog_box .= '    </div>';
-            $dialog_box .= '</div>';
-
-            $response .= $dialog_box;
-
-			wc_add_notice( $response, 'notice' );
-
-			return array(
-            			'result'   => 'success',
-            			'refresh'   => 'true'
-        		);
-
-			$woocommerce->cart->empty_cart();
-
-		}
-
-
-
-
-		// Get the values we need
-		// $r['response_code']             = $resp[0];
-		// $r['response_sub_code']         = $resp[1];
-		// $r['response_reason_code']      = $resp[2];
-		// $r['response_reason_text']      = $resp[3];
-
-		// Test the code to know if the transaction went through or not.
-		// 1 or 4 means the transaction was a success
-		// if ( ( $r['response_code'] == 1 ) || ( $r['response_code'] == 4 ) ) {
-			// Payment has been successful
-		//	$customer_order->add_order_note( __( 'Authorize.net payment completed.', 'dash-checkout' ) );
-
-			// Mark order as Paid
-		//	$customer_order->payment_complete();
-
-			// Empty the cart (Very important step)
-		//	$woocommerce->cart->empty_cart();
-
-			// Redirect to thank you page
-		//	return array(
-		//		'result'   => 'success',
-		//		'redirect' => $this->get_return_url( $customer_order ),
-		//	);
-		// } else {
-			// Transaction was not succesful
-			// Add notice to the cart
-		//	wc_add_notice( $r['response_reason_text'], 'error' );
-			// Add note to the order for your reference
-		//	$customer_order->add_order_note( 'Error: '. $r['response_reason_text'] );
-		// }
+        $woocommerce->cart->empty_cart();
 
 	}
 
@@ -578,7 +410,7 @@ class DASH_Checkout extends WC_Payment_Gateway {
 		}
 	}
 
-} // End of SPYR_AuthorizeNet_AIM
+}
 
 
 
@@ -620,7 +452,7 @@ add_action( 'wp_enqueue_scripts', 'custom_style' );
 
 
 function dash_payment_service() {
-    wp_register_script('receiver', plugins_url('js/checkout.js', __FILE__), array('jquery'), 8.6, true);
+    wp_register_script('receiver', plugins_url('js/checkout.js', __FILE__), array('jquery'), 9.4, true);
 	wp_enqueue_script('receiver');
 }
 add_action( 'wp', 'dash_payment_service' );
