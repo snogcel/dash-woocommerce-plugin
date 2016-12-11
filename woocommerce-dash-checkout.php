@@ -6,16 +6,16 @@ class DASH_Checkout extends WC_Payment_Gateway {
 	function __construct() {
 
 		// The global ID for this Payment method
-		$this->id = "spyr_authorizenet_aim";
+		$this->id = "dash_checkout";
 
 		// The Title shown on the top of the Payment Gateways Page next to all the other Payment Gateways
-		$this->method_title = __( "Authorize.net AIM", 'spyr-authorizenet-aim' );
+		$this->method_title = __( "DASH Checkout", 'dash-checkout' );
 
 		// The description for this Payment Gateway, shown on the actual Payment options page on the backend
-		$this->method_description = __( "Authorize.net AIM Payment Gateway Plug-in for WooCommerce", 'spyr-authorizenet-aim' );
+		$this->method_description = __( "DASH Checkout Plug-in for WooCommerce", 'dash-checkout' );
 
 		// The title to be used for the vertical tabs that can be ordered top to bottom
-		$this->title = __( "Authorize.net AIM", 'spyr-authorizenet-aim' );
+		$this->title = __( "DASH Checkout", 'dash-checkout' );
 
 		// If you want to show an image next to the gateway's name on the frontend, enter a URL to an image.
 		$this->icon = null;
@@ -43,7 +43,7 @@ class DASH_Checkout extends WC_Payment_Gateway {
 		add_action( 'admin_notices', array( $this,	'do_ssl_check' ) );
 
 		// Check for callback
-		add_action( 'woocommerce_api_spyr_authorizenet_aim', array( $this, 'check_response' ) );
+		add_action( 'woocommerce_api_dash_checkout', array( $this, 'check_response' ) );
 
         // API Routes
         add_action( 'receiver_callback', array( $this, 'valid_response' ) );
@@ -71,39 +71,39 @@ class DASH_Checkout extends WC_Payment_Gateway {
 	public function init_form_fields() {
 		$this->form_fields = array(
 			'enabled' => array(
-				'title'		=> __( 'Enable / Disable', 'spyr-authorizenet-aim' ),
-				'label'		=> __( 'Enable this payment gateway', 'spyr-authorizenet-aim' ),
+				'title'		=> __( 'Enable / Disable', 'dash-checkout' ),
+				'label'		=> __( 'Enable this payment gateway', 'dash-checkout' ),
 				'type'		=> 'checkbox',
 				'default'	=> 'no',
 			),
 			'title' => array(
-				'title'		=> __( 'Title', 'spyr-authorizenet-aim' ),
+				'title'		=> __( 'Title', 'dash-checkout' ),
 				'type'		=> 'text',
-				'desc_tip'	=> __( 'Payment title the customer will see during the checkout process.', 'spyr-authorizenet-aim' ),
-				'default'	=> __( 'DASH', 'spyr-authorizenet-aim' ),
+				'desc_tip'	=> __( 'Payment title the customer will see during the checkout process.', 'dash-checkout' ),
+				'default'	=> __( 'DASH', 'dash-checkout' ),
 			),
 			'description' => array(
-				'title'		=> __( 'Description', 'spyr-authorizenet-aim' ),
+				'title'		=> __( 'Description', 'dash-checkout' ),
 				'type'		=> 'textarea',
-				'desc_tip'	=> __( 'Payment description the customer will see during the checkout process.', 'spyr-authorizenet-aim' ),
-				'default'	=> __( 'Pay securely using DASH.', 'spyr-authorizenet-aim' ),
+				'desc_tip'	=> __( 'Payment description the customer will see during the checkout process.', 'dash-checkout' ),
+				'default'	=> __( 'Pay securely using DASH.', 'dash-checkout' ),
 				'css'		=> 'max-width:350px;'
 			),
 			'api_login' => array(
-				'title'		=> __( 'Dashpay API Key', 'spyr-authorizenet-aim' ),
+				'title'		=> __( 'Dashpay API Key', 'dash-checkout' ),
 				'type'		=> 'text',
-				'desc_tip'	=> __( 'This is the API Key provided by the Dash Payment Service when you signed up for an account.', 'spyr-authorizenet-aim' ),
+				'desc_tip'	=> __( 'This is the API Key provided by the Dash Payment Service when you signed up for an account.', 'dash-checkout' ),
 			),
 			'trans_key' => array(
-				'title'		=> __( 'Dashpay User Account', 'spyr-authorizenet-aim' ),
+				'title'		=> __( 'Dashpay User Account', 'dash-checkout' ),
 				'type'		=> 'password',
-				'desc_tip'	=> __( 'This is an arbitrary user account presently.', 'spyr-authorizenet-aim' ),
+				'desc_tip'	=> __( 'This is an arbitrary user account presently.', 'dash-checkout' ),
 			),
 			'environment' => array(
-				'title'		=> __( 'Authorize.net Test Mode', 'spyr-authorizenet-aim' ),
-				'label'		=> __( 'Enable Test Mode', 'spyr-authorizenet-aim' ),
+				'title'		=> __( 'Authorize.net Test Mode', 'dash-checkout' ),
+				'label'		=> __( 'Enable Test Mode', 'dash-checkout' ),
 				'type'		=> 'checkbox',
-				'description' => __( 'Place the payment gateway in test mode.', 'spyr-authorizenet-aim' ),
+				'description' => __( 'Place the payment gateway in test mode.', 'dash-checkout' ),
 				'default'	=> 'no',
 			)
 		);		
@@ -341,7 +341,7 @@ class DASH_Checkout extends WC_Payment_Gateway {
 //	if ($receiverCallback['payment_received_amount_duffs'] == $amount_duffs) {
 		$customer_order->payment_complete(); // zero confirmation - marks payment as "processing"
 //	} else {
-//		$customer_order->update_status('on-hold', __('Incorrect Payment Amount', 'spyr_authorizenet_aim'));
+//		$customer_order->update_status('on-hold', __('Incorrect Payment Amount', 'dash_checkout'));
 //	}
 
     }
@@ -376,7 +376,7 @@ class DASH_Checkout extends WC_Payment_Gateway {
 		    "description"        	    => str_replace( "#", "", $customer_order->get_order_number() ),
 
 		    // Callback URL
-		    "callbackUrl"           	=> WC()->api_request_url( 'spyr_authorizenet_aim' )
+		    "callbackUrl"           	=> WC()->api_request_url( 'dash_checkout' )
 
 
 			// Authorize.net Credentials and API Info
@@ -388,9 +388,9 @@ class DASH_Checkout extends WC_Payment_Gateway {
 			//"x_amount"             	=> $customer_order->order_total,
 
 			// Credit Card Information
-			//"x_card_num"           	=> str_replace( array(' ', '-' ), '', $_POST['spyr_authorizenet_aim-card-number'] ),
-			//"x_card_code"          	=> ( isset( $_POST['spyr_authorizenet_aim-card-cvc'] ) ) ? $_POST['spyr_authorizenet_aim-card-cvc'] : '',
-			//"x_exp_date"           	=> str_replace( array( '/', ' '), '', $_POST['spyr_authorizenet_aim-card-expiry'] ),
+			//"x_card_num"           	=> str_replace( array(' ', '-' ), '', $_POST['dash_checkout-card-number'] ),
+			//"x_card_code"          	=> ( isset( $_POST['dash_checkout-card-cvc'] ) ) ? $_POST['dash_checkout-card-cvc'] : '',
+			//"x_exp_date"           	=> str_replace( array( '/', ' '), '', $_POST['dash_checkout-card-expiry'] ),
 
 			//"x_type"               	=> 'AUTH_CAPTURE',
 			//"x_invoice_num"        	=> str_replace( "#", "", $customer_order->get_order_number() ),
@@ -438,10 +438,10 @@ class DASH_Checkout extends WC_Payment_Gateway {
 		) );
 
 		if ( is_wp_error( $response ) )
-			throw new Exception( __( 'We are currently experiencing problems trying to connect to this payment gateway. Sorry for the inconvenience.', 'spyr-authorizenet-aim' ) );
+			throw new Exception( __( 'We are currently experiencing problems trying to connect to this payment gateway. Sorry for the inconvenience.', 'dash-checkout' ) );
 
 		if ( empty( $response['body'] ) )
-			throw new Exception( __( 'Authorize.net\'s Response was empty.', 'spyr-authorizenet-aim' ) );
+			throw new Exception( __( 'Authorize.net\'s Response was empty.', 'dash-checkout' ) );
 
 		// Retrieve the body's resopnse if no errors found
 		$json = wp_remote_retrieve_body( $response );
@@ -548,7 +548,7 @@ class DASH_Checkout extends WC_Payment_Gateway {
 		// 1 or 4 means the transaction was a success
 		// if ( ( $r['response_code'] == 1 ) || ( $r['response_code'] == 4 ) ) {
 			// Payment has been successful
-		//	$customer_order->add_order_note( __( 'Authorize.net payment completed.', 'spyr-authorizenet-aim' ) );
+		//	$customer_order->add_order_note( __( 'Authorize.net payment completed.', 'dash-checkout' ) );
 
 			// Mark order as Paid
 		//	$customer_order->payment_complete();
@@ -628,7 +628,7 @@ add_action( 'wp_enqueue_scripts', 'custom_style' );
 
 
 function dash_payment_service() {
-    wp_register_script('receiver', plugins_url('js/checkout.js', __FILE__), array('jquery'), 8.4, true);
+    wp_register_script('receiver', plugins_url('js/checkout.js', __FILE__), array('jquery'), 8.5, true);
 	wp_enqueue_script('receiver');
 }
 add_action( 'wp', 'dash_payment_service' );

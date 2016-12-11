@@ -32,7 +32,7 @@ function dash_checkout_init() {
 add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), 'dash_checkout_action_links' );
 function dash_checkout_action_links( $links ) {
 	$plugin_links = array(
-		'<a href="' . admin_url( 'admin.php?page=wc-settings&tab=checkout' ) . '">' . __( 'Settings', 'spyr-authorizenet-aim' ) . '</a>',
+		'<a href="' . admin_url( 'admin.php?page=wc-settings&tab=checkout' ) . '">' . __( 'Settings', 'dash-checkout' ) . '</a>',
 	);
 
 	// Merge our new link with the default ones

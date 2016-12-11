@@ -74,7 +74,7 @@
         }).promise().done( function() {
 
             jQuery("input[name='payment_method']:checked").each(function() {
-                if (jQuery(this).val() == 'spyr_authorizenet_aim') {
+                if (jQuery(this).val() == 'dash_checkout') {
                     checkout.setCurrency();
                 } else {
                     checkout.checkoutActive = false;
@@ -83,7 +83,7 @@
             });
 
             jQuery("input[name='payment_method']").change(function() {
-                if (jQuery(this).val() == 'spyr_authorizenet_aim') {
+                if (jQuery(this).val() == 'dash_checkout') {
                     checkout.setCurrency();
                 } else {
                     checkout.checkoutActive = false;
@@ -528,7 +528,7 @@
         var opts = {
             type: "POST",
             provider: "/",
-            route: "?wc-api=spyr_authorizenet_aim",
+            route: "?wc-api=dash_checkout",
             data: {
                 site_currency: true
             }
@@ -543,7 +543,7 @@
         var opts = {
             type: "POST",
             provider: "/",
-            route: "?wc-api=spyr_authorizenet_aim",
+            route: "?wc-api=dash_checkout",
             data: {
                 receiver_status: true,
                 order_id: this._orderId
@@ -558,7 +558,7 @@
         var opts = {
             type: "POST",
             provider: "/",
-            route: "?wc-api=spyr_authorizenet_aim",
+            route: "?wc-api=dash_checkout",
             data: {
                 get_order_id: true,
                 dash_payment_address: address
