@@ -230,6 +230,7 @@ class DASH_Checkout extends WC_Payment_Gateway {
         $amount_duffs = get_post_meta( $customer_order->id, 'amount_duffs', true );
 
 		if ($txlock == 'true') {
+            $customer_order->update_status( 'completed' );
             echo json_encode(array("order_status"=>$status, "return_url"=>$return_url, "txid"=>$txid, "txlock"=>$txlock, "amount_duffs"=>$amount_duffs));
 		} else {
             echo json_encode(array("order_status"=>$status, "txid"=>$txid, "txlock"=>$txlock, "amount_duffs"=>$amount_duffs));
