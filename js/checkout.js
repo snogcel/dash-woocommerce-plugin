@@ -65,34 +65,6 @@
 
     jQuery( 'body' ).on( 'updated_checkout', function() {
 
-        checkout.checkoutActive = false; // set status to inactive
-
-        jQuery(".siteCurrency").each(function() { // check for existence of div.siteCurrency created by checkout
-
-            checkout.checkoutActive = true; // set status to active if so
-
-        }).promise().done( function() {
-
-            jQuery("input[name='payment_method']:checked").each(function() {
-                if (jQuery(this).val() == 'dash_checkout') {
-                    checkout.setCurrency();
-                } else {
-                    checkout.checkoutActive = false;
-                    checkout.resetCurrency();
-                }
-            });
-
-            jQuery("input[name='payment_method']").change(function() {
-                if (jQuery(this).val() == 'dash_checkout') {
-                    checkout.setCurrency();
-                } else {
-                    checkout.checkoutActive = false;
-                    checkout.resetCurrency();
-                }
-            });
-
-        });
-
         // checkout has refreshed, time to display QR Code
 
         // get Payment Receiver
@@ -163,6 +135,34 @@
 
 
         }
+
+        checkout.checkoutActive = false; // set status to inactive
+
+        jQuery(".siteCurrency").each(function() { // check for existence of div.siteCurrency created by checkout
+
+            checkout.checkoutActive = true; // set status to active if so
+
+        }).promise().done( function() {
+
+            jQuery("input[name='payment_method']:checked").each(function() {
+                if (jQuery(this).val() == 'dash_checkout') {
+                    checkout.setCurrency();
+                } else {
+                    checkout.checkoutActive = false;
+                    checkout.resetCurrency();
+                }
+            });
+
+            jQuery("input[name='payment_method']").change(function() {
+                if (jQuery(this).val() == 'dash_checkout') {
+                    checkout.setCurrency();
+                } else {
+                    checkout.checkoutActive = false;
+                    checkout.resetCurrency();
+                }
+            });
+
+        });
 
     });
 

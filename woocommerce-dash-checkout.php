@@ -18,7 +18,7 @@ class DASH_Checkout extends WC_Payment_Gateway {
 		$this->title = __( "DASH Checkout", 'dash-checkout' );
 
 		// If you want to show an image next to the gateway's name on the frontend, enter a URL to an image.
-		$this->icon = null;
+		$this->icon = plugins_url( '/images/dash_icon.png', __FILE__ );
 
 		// Bool. Can be set to true if you want payment fields to show on the checkout 
 		// if doing a direct integration, which we are doing in this case
@@ -355,6 +355,7 @@ class DASH_Checkout extends WC_Payment_Gateway {
         // inject Payment Receiver into checkout page
 
         $response = '<span><strong>Payment Receiver Created</strong></span>';
+        $response .= '<div class="hidden">';
         $response .= '<span class="hidden" id="order_id">' . $customer_order->get_order_number() . '</span>';
 
         $response .= '<span class="hidden" id="receiver_id">' . $json["receiver_id"] . '</span>';
@@ -366,6 +367,7 @@ class DASH_Checkout extends WC_Payment_Gateway {
         $response .= '<span class="hidden" id="amount_duffs">' . $json["amount_duffs"] . '</span>';
 
         $response .= '<span class="hidden" id="return_url">' . $this->get_return_url( $customer_order ) . '</span>';
+        $response .= '</div>';
 
         $amount_dash = round($json["amount_duffs"]/100000000, 2);
         $amount_dots = round($json["amount_duffs"]/100, 2);
@@ -464,7 +466,7 @@ add_action( 'wp_enqueue_scripts', 'custom_style' );
 
 
 function dash_payment_service() {
-    wp_register_script('receiver', plugins_url('js/checkout.js', __FILE__), array('jquery'), 9.5, true);
+    wp_register_script('receiver', plugins_url('js/checkout.js', __FILE__), array('jquery'), 9.6, true);
 	wp_enqueue_script('receiver');
 }
 add_action( 'wp', 'dash_payment_service' );
