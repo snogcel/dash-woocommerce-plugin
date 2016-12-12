@@ -81,6 +81,12 @@ class DASH_Checkout extends WC_Payment_Gateway {
 				'default'	=> __( 'Pay privately and securely with DASH.', 'dash-checkout' ),
 				'css'		=> 'max-width:350px;'
 			),
+            'confirmations' => array(
+                'title'		=> __( 'Confirmations', 'dash-checkout' ),
+                'type'		=> 'number',
+                'desc_tip'	=> __( 'The required of transaction confirmations before accepting payment.', 'dash-checkout' ),
+                'default'	=> __( '1', 'dash-checkout' ),
+            ),
 			'api_key' => array(
 				'title'		=> __( 'API Key', 'dash-checkout' ),
 				'type'		=> 'text',
@@ -164,7 +170,7 @@ class DASH_Checkout extends WC_Payment_Gateway {
     public function confirm_transaction( $post_data ) {
         global $wpdb;
 
-        // TODO - grab from plugin settings
+		$required_confirmations = $this->get_option( 'confirmations' );
 
         // get order_id by receiver_id
         $querystr = "
@@ -193,7 +199,7 @@ class DASH_Checkout extends WC_Payment_Gateway {
 
             $confirmations = $json['confirmations'];
 
-            if ($confirmations > 0) { // TODO - configurable number of confirmations
+            if ($confirmations >= $required_confirmations) {
 
                 $customer_order->update_status( 'completed' );
 
@@ -226,6 +232,7 @@ class DASH_Checkout extends WC_Payment_Gateway {
 
         // Get order by order_id
         $customer_order = new WC_Order( $postData['order_id'] );
+        $required_confirmations = $this->get_option( 'confirmations' );
 
         $status = $customer_order->status;
 
@@ -235,7 +242,7 @@ class DASH_Checkout extends WC_Payment_Gateway {
         $txlock = get_post_meta( $customer_order->id, 'txlock', true ); // txlock (InstantSend)
         $amount_duffs = get_post_meta( $customer_order->id, 'amount_duffs', true );
 
-		if ($txlock == 'true') {
+		if ($txlock == 'true' || $required_confirmations == 0) {
             $customer_order->update_status( 'completed' );
             echo json_encode(array("order_status"=>$status, "return_url"=>$return_url, "txid"=>$txid, "txlock"=>$txlock, "amount_duffs"=>$amount_duffs));
 		} else {
@@ -457,7 +464,7 @@ add_action( 'wp_enqueue_scripts', 'custom_style' );
 
 
 function dash_payment_service() {
-    wp_register_script('receiver', plugins_url('js/checkout.js', __FILE__), array('jquery'), 9.4, true);
+    wp_register_script('receiver', plugins_url('js/checkout.js', __FILE__), array('jquery'), 9.5, true);
 	wp_enqueue_script('receiver');
 }
 add_action( 'wp', 'dash_payment_service' );

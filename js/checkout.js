@@ -344,25 +344,17 @@
 
                     self.getTx(res.txid, function(err, result) { // fetch tx from insight-api
 
-                        if (result.confirmations < opts.confirmations) {
+                        transactionReceived(res);
 
-                            transactionReceived(res);
-
-                        }
-
-                        if (result.confirmations >= opts.confirmations) {
-
-                            console.log(res);
-
-                            self.confirmTransaction(
-                                self._paymentReceiver.receiver_id,
-                                self._paymentReceiver.dash_payment_address,
-                                result.txid,
-                                function(err, result) {
-                                    if(!err) transactionConfirmed(result); // result.return_url provided if sufficient confirmations
-                                });
-
-                        }
+                        self.confirmTransaction(
+                            self._paymentReceiver.receiver_id,
+                            self._paymentReceiver.dash_payment_address,
+                            result.txid,
+                            function(err, result) {
+                                if (result.return_url) { // result.return_url exists if sufficient confirmations reached
+                                    transactionConfirmed(result);
+                                }
+                            });
 
                     });
 
