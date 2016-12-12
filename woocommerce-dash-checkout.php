@@ -78,7 +78,7 @@ class DASH_Checkout extends WC_Payment_Gateway {
 				'title'		=> __( 'Description', 'dash-checkout' ),
 				'type'		=> 'textarea',
 				'desc_tip'	=> __( 'Payment description the customer will see during the checkout process.', 'dash-checkout' ),
-				'default'	=> __( 'Pay securely using DASH.', 'dash-checkout' ),
+				'default'	=> __( 'Pay privately and securely with DASH.', 'dash-checkout' ),
 				'css'		=> 'max-width:350px;'
 			),
 			'api_login' => array(
@@ -91,6 +91,12 @@ class DASH_Checkout extends WC_Payment_Gateway {
 				'type'		=> 'password',
 				'desc_tip'	=> __( 'This is an arbitrary user account presently.', 'dash-checkout' ),
 			),
+            'provider' => array(
+                'title'		=> __( 'Dash Payment Service API', 'dash-checkout' ),
+                'type'		=> 'text',
+                'desc_tip'	=> __( 'This is the API Key provided by the Dash Payment Service when you signed up for an account.', 'dash-checkout' ),
+                'default'	=> __( 'https://dev-test.dash.org/dash-payment-service/createReceiver', 'dash-checkout' ),
+            ),
 			'environment' => array(
 				'title'		=> __( 'Test Mode', 'dash-checkout' ),
 				'label'		=> __( 'Enable Test Mode', 'dash-checkout' ),
@@ -288,7 +294,7 @@ class DASH_Checkout extends WC_Payment_Gateway {
 
 		// Decide which URL to post to
 		$environment_url = ( "FALSE" == $environment )
-						   ? 'https://dev-test.dash.org/dash-payment-service/createReceiver'
+						   ? $this->get_option( 'provider' )
 						   : 'https://dev-test.dash.org/dash-payment-service/createReceiver';
 
 		// This is where the fun stuff begins
@@ -300,6 +306,7 @@ class DASH_Checkout extends WC_Payment_Gateway {
 		    // Order Details
 		    "currency"              	=> "USD",
 		    "amount"             	    => $customer_order->order_total,
+			"description"				=> $provider,
 
 		    // Callback URL
 		    "callbackUrl"           	=> WC()->api_request_url( 'dash_checkout' )
