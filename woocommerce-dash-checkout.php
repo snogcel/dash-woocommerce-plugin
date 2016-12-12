@@ -81,18 +81,18 @@ class DASH_Checkout extends WC_Payment_Gateway {
 				'default'	=> __( 'Pay privately and securely with DASH.', 'dash-checkout' ),
 				'css'		=> 'max-width:350px;'
 			),
-			'api_login' => array(
-				'title'		=> __( 'Dashpay API Key', 'dash-checkout' ),
+			'api_key' => array(
+				'title'		=> __( 'API Key', 'dash-checkout' ),
 				'type'		=> 'text',
 				'desc_tip'	=> __( 'This is the API Key provided by the Dash Payment Service when you signed up for an account.', 'dash-checkout' ),
 			),
-			'trans_key' => array(
-				'title'		=> __( 'Dashpay User Account', 'dash-checkout' ),
-				'type'		=> 'password',
+			'username' => array(
+				'title'		=> __( 'API Username', 'dash-checkout' ),
+				'type'		=> 'text',
 				'desc_tip'	=> __( 'This is an arbitrary user account presently.', 'dash-checkout' ),
 			),
             'provider' => array(
-                'title'		=> __( 'Dash Payment Service API', 'dash-checkout' ),
+                'title'		=> __( 'API Endpoint', 'dash-checkout' ),
                 'type'		=> 'text',
                 'desc_tip'	=> __( 'This is the API Key provided by the Dash Payment Service when you signed up for an account.', 'dash-checkout' ),
                 'default'	=> __( 'https://dev-test.dash.org/dash-payment-service/createReceiver', 'dash-checkout' ),
@@ -290,8 +290,6 @@ class DASH_Checkout extends WC_Payment_Gateway {
 		// Are we testing right now or is it a real transaction
 		$environment = ( $this->environment == "yes" ) ? 'TRUE' : 'FALSE';
 
-		// TODO get from plugin setting
-
 		// Decide which URL to post to
 		$environment_url = ( "FALSE" == $environment )
 						   ? $this->get_option( 'provider' )
@@ -300,13 +298,12 @@ class DASH_Checkout extends WC_Payment_Gateway {
 		// This is where the fun stuff begins
 		$payload = array(
 		    // Dashpay API Key and Credentials
-		    "api_key"              	=> $this->api_login,
-		    "email"                	=> $this->trans_key,
+		    "api_key"              	=> $this->api_key,
+		    "email"                	=> $this->username,
 
 		    // Order Details
 		    "currency"              	=> "USD",
 		    "amount"             	    => $customer_order->order_total,
-			"description"				=> $provider,
 
 		    // Callback URL
 		    "callbackUrl"           	=> WC()->api_request_url( 'dash_checkout' )
