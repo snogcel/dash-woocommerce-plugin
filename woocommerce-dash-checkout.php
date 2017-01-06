@@ -305,11 +305,11 @@ class DASH_Checkout extends WC_Payment_Gateway {
 		// This is where the fun stuff begins
 		$payload = array(
 		    // Dashpay API Key and Credentials
-		    "api_key"              	=> $this->api_key,
-		    "email"                	=> $this->username,
+		    // "api_key"              	=> $this->api_key,
+		    "email"                	    => $this->username,
 
 		    // Order Details
-		    "currency"              	=> "USD",
+		    "currency"              	=> get_woocommerce_currency_symbol(),
 		    "amount"             	    => $customer_order->order_total,
 
 		    // Callback URL
@@ -369,10 +369,10 @@ class DASH_Checkout extends WC_Payment_Gateway {
         $response .= '<span class="hidden" id="return_url">' . $this->get_return_url( $customer_order ) . '</span>';
         $response .= '</div>';
 
-        $amount_dash = round($json["amount_duffs"]/100000000, 2);
-        $amount_dots = round($json["amount_duffs"]/100, 2);
+        $amount_dash = $json["amount_duffs"]/100000000;
+        $amount_duffs = $json["amount_duffs"];
 
-        $dialog_box =  '<div id="modal">';
+        $dialog_box =  '<div id="modal" style="display:none">';
         $dialog_box .= '    <!-- Page content -->';
         $dialog_box .= '    <div class="row">';
         $dialog_box .= '        <div class="col-xs-12 col-md-6">';
@@ -381,17 +381,16 @@ class DASH_Checkout extends WC_Payment_Gateway {
         $dialog_box .= '        <div class="col-xs-12 col-md-6">';
         $dialog_box .= '            <div class="form-group row">';
         $dialog_box .= '                <label class="col-form-label formLabel formLabel_amount" id="formatted_dash">' . $amount_dash . ' DASH</label>';
-        $dialog_box .= '                <span class="formValue" id="formatted_duffs>' . $amount_dots . ' dots</span><br />';
         $dialog_box .= '            </div>';
         $dialog_box .= '            <div class="form-group row">';
-        $dialog_box .= '                <label class="col-form-label formLabel">Status</label>';
+        $dialog_box .= '                <label class="col-form-label formLabel" id="formatted_status">Order Status</label>';
         $dialog_box .= '                <span class="formValue" id="checkout_status">Pending</span>';
         $dialog_box .= '            </div>';
         $dialog_box .= '        </div>';
         $dialog_box .= '    </div>';
         $dialog_box .= '    <div class="row">';
         $dialog_box .= '        <div class="col-xs-12">';
-        $dialog_box .= '            <div><strong>Address: </strong><span class="formLabel_address">' . $json["dash_payment_address"] . '</span></div>';
+        $dialog_box .= '            <div><strong>Address: </strong><span class="formLabel_address" id="formatted_amount">' . $json["dash_payment_address"] . '</span></div>';
         $dialog_box .= '        </div>';
         $dialog_box .= '    </div>';
         $dialog_box .= '</div>';
@@ -459,14 +458,14 @@ add_action( 'wp_enqueue_scripts', 'iziz_modal_style' );
 // other css
 function custom_style()
 {
-    wp_register_style( 'custom', plugins_url( '/css/style.css', __FILE__ ), array(), '20120208', 'all' );
+    wp_register_style( 'custom', plugins_url( '/css/style.css', __FILE__ ), array(), '20120210', 'all' );
     wp_enqueue_style( 'custom' );
 }
 add_action( 'wp_enqueue_scripts', 'custom_style' );
 
 
 function dash_payment_service() {
-    wp_register_script('receiver', plugins_url('js/checkout.js', __FILE__), array('jquery'), 9.6, true);
+    wp_register_script('receiver', plugins_url('js/checkout.js', __FILE__), array('jquery'), 10.5, true);
 	wp_enqueue_script('receiver');
 }
 add_action( 'wp', 'dash_payment_service' );

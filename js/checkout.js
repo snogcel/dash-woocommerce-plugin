@@ -1,7 +1,5 @@
 // (function($){
 
-
-
     // Plugin Config
 
     var socket = null;
@@ -101,6 +99,8 @@
                     // Initialize Payment Receiver and (optional) Socket.io Listener
                     checkout.init(config, paymentReceiver, socket, function(err, checkout) {
 
+                        jQuery('#modal').css('display', 'block'); // unhide payment receiver
+
                         // checkout has initialized
                         checkout.displayQRCode(function(err, res) {
 
@@ -108,7 +108,11 @@
 
                             jQuery('#qrcode').qrcode(res);
 
-                            jQuery('#modal').iziModal('open');
+                            jQuery('#modal').iziModal('open', function() {
+
+                                jQuery('.iziModal-button-close').css('display', 'none'); // hide close button
+
+                            });
 
                             checkout.paymentWindowActive = true;
 
