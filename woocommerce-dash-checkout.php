@@ -82,26 +82,28 @@ class DASH_Checkout extends WC_Payment_Gateway {
 				'css'		=> 'max-width:350px;'
 			),
             'confirmations' => array(
-                'title'		=> __( 'Confirmations', 'dash-checkout' ),
+                'title'		=> __( 'TX Confirmations', 'dash-checkout' ),
                 'type'		=> 'number',
                 'desc_tip'	=> __( 'The required of transaction confirmations before accepting payment.', 'dash-checkout' ),
                 'default'	=> __( '1', 'dash-checkout' ),
             ),
-			'api_key' => array(
-				'title'		=> __( 'API Key', 'dash-checkout' ),
-				'type'		=> 'text',
-				'desc_tip'	=> __( 'This is the API Key provided by the Dash Payment Service when you signed up for an account.', 'dash-checkout' ),
-			),
 			'username' => array(
 				'title'		=> __( 'API Username', 'dash-checkout' ),
 				'type'		=> 'text',
 				'desc_tip'	=> __( 'This is an arbitrary user account presently.', 'dash-checkout' ),
+				'default'	=> __( 'user@example.com', 'dash-checkout' ),
 			),
             'provider' => array(
-                'title'		=> __( 'API Endpoint', 'dash-checkout' ),
+                'title'		=> __( 'Payment Service API', 'dash-checkout' ),
                 'type'		=> 'text',
-                'desc_tip'	=> __( 'This is the API Key provided by the Dash Payment Service when you signed up for an account.', 'dash-checkout' ),
+                'desc_tip'	=> __( 'URL of Dash Payment Service API Endpoint.', 'dash-checkout' ),
                 'default'	=> __( 'https://dev-test.dash.org/dash-payment-service/createReceiver', 'dash-checkout' ),
+            ),
+            'insight' => array(
+                'title'		=> __( 'Insight API', 'dash-checkout' ),
+                'type'		=> 'text',
+                'desc_tip'	=> __( 'URL of Insight API Endpoint.', 'dash-checkout' ),
+                'default'	=> __( 'https://dev-test.dash.org/insight-api-dash', 'dash-checkout' ),
             ),
 			'environment' => array(
 				'title'		=> __( 'Test Mode', 'dash-checkout' ),
@@ -190,7 +192,9 @@ class DASH_Checkout extends WC_Payment_Gateway {
         $status = $customer_order->status;
         $return_url = get_post_meta( $customer_order->id, 'return_url', true );
 
-        $response = wp_remote_get( 'https://dev-test.dash.org/insight-api-dash/tx/' . $post_data['txid'] );
+        $insight = $this->get_option( 'insight' );
+
+        $response = wp_remote_get( $insight . '/tx/' . $post_data['txid'] );
 
         try {
 
@@ -309,7 +313,7 @@ class DASH_Checkout extends WC_Payment_Gateway {
 		    "username"                	=> $this->username,
 
 		    // Order Details
-		    "currency"              	=> get_woocommerce_currency_symbol(),
+		    "currency"              	=> get_woocommerce_currency(),
 		    "amount"             	    => $customer_order->order_total,
 
 		    // Callback URL
