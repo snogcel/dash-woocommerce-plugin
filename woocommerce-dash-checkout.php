@@ -306,7 +306,7 @@ class DASH_Checkout extends WC_Payment_Gateway {
 		$payload = array(
 		    // Dashpay API Key and Credentials
 		    // "api_key"              	=> $this->api_key,
-		    "email"                	    => $this->username,
+		    "username"                	=> $this->username,
 
 		    // Order Details
 		    "currency"              	=> get_woocommerce_currency_symbol(),
