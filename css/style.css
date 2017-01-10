@@ -1,9 +1,9 @@
 #formatted_dash { color: #085D9F !important; font-weight:bold !important; font-size:1.5em !important; }
 #formatted_address { font-size:.9em !important; color: #393939 !important; }
 #formatted_status { color: #085D9F !important; font-weight:bold !important; display:block !important; }
+#checkout_status { color:#666; }
+#address { color: #666; display:inline !important; }
 
 .iziModal-button-close { display: none !important; }
-
-.siteCurrency {
-    opacity:0.5;
-}
+.siteCurrency { opacity:0.5; }
+.hidden { display:none; }

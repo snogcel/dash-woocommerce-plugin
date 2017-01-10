@@ -1,5 +1,5 @@
 <?php
-/* Authorize.net AIM Payment Gateway Class */
+/* DASH Checkout Payment Gateway Class */
 class DASH_Checkout extends WC_Payment_Gateway {
 
 	// Setup our Gateway's id, description and other values
@@ -359,7 +359,7 @@ class DASH_Checkout extends WC_Payment_Gateway {
         // inject Payment Receiver into checkout page
 
         $response = '<span><strong>Payment Receiver Created</strong></span>';
-        $response .= '<div class="hidden">';
+        $response .= '<div style="display:none;">';
         $response .= '<span class="hidden" id="order_id">' . $customer_order->get_order_number() . '</span>';
 
         $response .= '<span class="hidden" id="receiver_id">' . $json["receiver_id"] . '</span>';
@@ -376,7 +376,7 @@ class DASH_Checkout extends WC_Payment_Gateway {
         $amount_dash = $json["amount_duffs"]/100000000;
         $amount_duffs = $json["amount_duffs"];
 
-        $dialog_box =  '<div id="modal" style="display:none">';
+        $dialog_box =  '<div id="modal" class="bootstrap-iso" style="display:none">';
         $dialog_box .= '    <!-- Page content -->';
         $dialog_box .= '    <div class="row">';
         $dialog_box .= '        <div class="col-xs-12 col-md-6">';
@@ -394,7 +394,7 @@ class DASH_Checkout extends WC_Payment_Gateway {
         $dialog_box .= '    </div>';
         $dialog_box .= '    <div class="row">';
         $dialog_box .= '        <div class="col-xs-12">';
-        $dialog_box .= '            <div><strong>Address: </strong><span class="formLabel_address" id="formatted_address">' . $json["dash_payment_address"] . '</span></div>';
+        $dialog_box .= '            <div><span id="address"><strong>Address: </strong></span><span class="formLabel_address" id="formatted_address">' . $json["dash_payment_address"] . '</span></div>';
         $dialog_box .= '        </div>';
         $dialog_box .= '    </div>';
         $dialog_box .= '</div>';
@@ -473,5 +473,14 @@ function dash_payment_service() {
 	wp_enqueue_script('receiver');
 }
 add_action( 'wp', 'dash_payment_service' );
+
+function bootstrap_enqueue() {
+    wp_register_script( 'bootstrap-js', plugins_url( '/js/bootstrap.min.js', __FILE__ ), array('jquery'), NULL, true );
+    wp_register_style( 'bootstrap-css', plugins_url( '/css/bootstrap-iso.css', __FILE__ ), false, NULL, 'all' );
+
+    wp_enqueue_script( 'bootstrap-js' );
+    wp_enqueue_style( 'bootstrap-css' );
+}
+add_action( 'wp_enqueue_scripts', 'bootstrap_enqueue' );
 
 ?>
