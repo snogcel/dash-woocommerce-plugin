@@ -394,7 +394,7 @@ class DASH_Checkout extends WC_Payment_Gateway {
         $dialog_box .= '    </div>';
         $dialog_box .= '    <div class="row">';
         $dialog_box .= '        <div class="col-xs-12">';
-        $dialog_box .= '            <div><strong>Address: </strong><span class="formLabel_address" id="formatted_amount">' . $json["dash_payment_address"] . '</span></div>';
+        $dialog_box .= '            <div><strong>Address: </strong><span class="formLabel_address" id="formatted_address">' . $json["dash_payment_address"] . '</span></div>';
         $dialog_box .= '        </div>';
         $dialog_box .= '    </div>';
         $dialog_box .= '</div>';
