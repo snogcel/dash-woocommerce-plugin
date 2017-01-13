@@ -477,7 +477,7 @@
 
         var opts = {
             type: "POST",
-            route: "/dash-payment-service/valuationService",
+            route: "/dash-payment-processor/valuationService",
             data: {
                 fiatCode: fiatCode
             }

@@ -97,7 +97,7 @@ class DASH_Checkout extends WC_Payment_Gateway {
                 'title'		=> __( 'Payment Service API', 'dash-checkout' ),
                 'type'		=> 'text',
                 'desc_tip'	=> __( 'URL of Dash Payment Service API Endpoint.', 'dash-checkout' ),
-                'default'	=> __( 'https://dev-test.dash.org/dash-payment-service/createReceiver', 'dash-checkout' ),
+                'default'	=> __( 'https://dev-test.dash.org/dash-payment-processor/createReceiver', 'dash-checkout' ),
             ),
             'insight' => array(
                 'title'		=> __( 'Insight API', 'dash-checkout' ),
@@ -304,7 +304,7 @@ class DASH_Checkout extends WC_Payment_Gateway {
 		// Decide which URL to post to
 		$environment_url = ( "FALSE" == $environment )
 						   ? $this->get_option( 'provider' )
-						   : 'https://dev-test.dash.org/dash-payment-service/createReceiver';
+						   : 'https://dev-test.dash.org/dash-payment-processor/createReceiver';
 
 		// This is where the fun stuff begins
 		$payload = array(
