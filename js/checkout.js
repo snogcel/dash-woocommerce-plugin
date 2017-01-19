@@ -106,7 +106,7 @@
 
                             jQuery("#modal").iziModal(config.paymentWindowOpts);
 
-                            jQuery('#qrcode').qrcode(res);
+                            jQuery('#qrcode').qrcode({"text": res});
 
                             jQuery('#modal').iziModal('open', function() {
 
@@ -422,9 +422,11 @@
         var paymentReceiver = this._paymentReceiver;
 
         var address = paymentReceiver.dash_payment_address;
-        var amount = paymentReceiver.amount_duffs;
+        var amount = parseFloat(paymentReceiver.amount_duffs)/100000000;
 
-        cb(null, 'dash:{{'+address+'}}?amount={{'+amount+'}}');
+        var QRCode = 'dash:'+address+'?amount='+amount;
+
+        cb(null, QRCode);
     };
 
 
